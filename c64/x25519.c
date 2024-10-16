@@ -653,6 +653,8 @@ static void rfc7748(const char *bk, const char *bu,char *bv) {
     reverse(bv); // convert to little endian
 }
 
+// API
+
 #include "tlsecc.h"
 
 void X25519_KEY_PAIR(char *SK,char *PK)
@@ -662,7 +664,13 @@ void X25519_KEY_PAIR(char *SK,char *PK)
     rfc7748(SK,bu,PK);
 }
 
-void X25519_SHARED_SECRET(char *SK,char *PK,char *SS)
+int X25519_SHARED_SECRET(char *SK,char *PK,char *SS)
 {
+    char ors=0;
     rfc7748(SK,PK,SS);
+
+// all zeros is suspect...
+    for (int i=0;i<32;i++) ors|=SS[i];
+    if (ors==0) return 0;
+    return 1;
 }

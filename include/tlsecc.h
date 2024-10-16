@@ -16,24 +16,27 @@ extern void X25519_KEY_PAIR(char *SK,char *PK);
     @param SK an input random 32-byte secret key
     @param PK an input random 32-byte public key
     @param SS an output shared 32-byte secret
+    @return true for success
  */
-extern void X25519_SHARED_SECRET(char *SK,char *PK,char *SS);
+extern int X25519_SHARED_SECRET(char *SK,char *PK,char *SS);
 
 
 /** @brief Generate an NIST256 key pair
  *
+    @param compress set true for point compression
     @param SK an input random 32-byte secret key
     @param PK an output random 32-byte public key
  */
-extern void NIST256_KEY_PAIR(char *SK,char *PK);
+extern void NIST256_KEY_PAIR(int compress,char *SK,char *PK);
 
 /** @brief Generate an NIST256 shared secret
  *
     @param SK an input random 32-byte secret key
     @param PK an input random public key, 33-byte compressed or 65 bytes uncompressed
     @param SS an output shared 32-byte secret
+    @return true for success
  */
-extern void NIST256_SHARED_SECRET(char *SK,char *PK,char *SS);
+extern int NIST256_SHARED_SECRET(char *SK,char *PK,char *SS);
 
 
 /** @brief Generate an NIST256 ECDSA signature
@@ -52,7 +55,7 @@ extern void NIST256_SIGN(char *SK,char *ran,int mlen,char *m,char *sig);
     @param mlen the length of the input
     @param m an input message
     @param sig an input 64 byte signature
-    @return 1 if signature is good, else 0
+    @return true if signature is good, else false
  */
 extern int NIST256_VERIFY(char *PK,int mlen,char *m,char *sig);
 
