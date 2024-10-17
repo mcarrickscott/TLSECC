@@ -1,8 +1,7 @@
-
 // API header file for Edwards and Weierstrass curves 
 
-#ifndef NIST256CURVE_H
-#define NIST256CURVE_H
+#ifndef NIST384CURVE_H
+#define NIST384CURVE_H
 
 // point.h generated from the curve.py script, and required for definition of point structure 
 /*** Insert automatically generated point definition point.h here ***/
@@ -10,16 +9,17 @@
 // elliptic curve point in projective coordinates
 #include <stdint.h>
 
-#ifndef NIST256
-#define NIST256
+#ifndef NIST384
+#define NIST384
 #endif
 #define WORDLENGTH 64
 struct xyz {
-        uint64_t x[5];
-        uint64_t y[5];
-        uint64_t z[5];
+	uint64_t x[7];
+	uint64_t y[7];
+	uint64_t z[7];
 };
 typedef struct xyz point;
+
 
 /*** End of automatically generated code ***/
 

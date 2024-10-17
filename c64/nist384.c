@@ -16,7 +16,7 @@
 /*** Insert automatically generated code for modulus field.c here ***/
 
 
-// Command line : python monty.py 64 NIST256
+// Command line : python monty.py 64 NIST384
 
 #include <stdint.h>
 #include <stdio.h>
@@ -27,47 +27,49 @@
 #define dpint __uint128_t
 
 #define Wordlength 64
-#define Nlimbs 5
-#define Radix 52
-#define Nbits 256
-#define Nbytes 32
+#define Nlimbs 7
+#define Radix 56
+#define Nbits 384
+#define Nbytes 48
 
 #define MONTGOMERY
-#define NIST256
+#define NIST384
 
 // propagate carries
 static spint inline prop(spint *n) {
   int i;
-  spint mask = ((spint)1 << 52u) - (spint)1;
+  spint mask = ((spint)1 << 56u) - (spint)1;
   sspint carry = (sspint)n[0];
-  carry >>= 52u;
+  carry >>= 56u;
   n[0] &= mask;
-  for (i = 1; i < 4; i++) {
+  for (i = 1; i < 6; i++) {
     carry += (sspint)n[i];
     n[i] = (spint)carry & mask;
-    carry >>= 52u;
+    carry >>= 56u;
   }
-  n[4] += (spint)carry;
-  return -((n[4] >> 1) >> 62u);
+  n[6] += (spint)carry;
+  return -((n[6] >> 1) >> 62u);
 }
 
 // propagate carries and add p if negative, propagate carries again
 static int inline flatten(spint *n) {
   spint carry = prop(n);
-  n[0] -= (spint)1u & carry;
-  n[1] += ((spint)0x100000000000u) & carry;
-  n[3] += ((spint)0x1000000000u) & carry;
-  n[4] += ((spint)0xffffffff0000u) & carry;
+  n[0] += ((spint)0xffffffffu) & carry;
+  n[1] += ((spint)0xffff0000000000u) & carry;
+  n[2] += ((spint)0xfffffffffeffffu) & carry;
+  n[3] -= (spint)1u & carry;
+  n[6] += ((spint)0x1000000000000u) & carry;
   (void)prop(n);
   return (int)(carry & 1);
 }
 
 // Montgomery final subtract
 static int inline modfsb(spint *n) {
-  n[0] += (spint)1u;
-  n[1] -= (spint)0x100000000000u;
-  n[3] -= (spint)0x1000000000u;
-  n[4] -= (spint)0xffffffff0000u;
+  n[0] -= (spint)0xffffffffu;
+  n[1] -= (spint)0xffff0000000000u;
+  n[2] -= (spint)0xfffffffffeffffu;
+  n[3] += (spint)1u;
+  n[6] -= (spint)0x1000000000000u;
   return flatten(n);
 }
 
@@ -79,15 +81,19 @@ static void inline modadd(const spint *a, const spint *b, spint *n) {
   n[2] = a[2] + b[2];
   n[3] = a[3] + b[3];
   n[4] = a[4] + b[4];
-  n[0] += (spint)2u;
-  n[1] -= (spint)0x200000000000u;
-  n[3] -= (spint)0x2000000000u;
-  n[4] -= (spint)0x1fffffffe0000u;
+  n[5] = a[5] + b[5];
+  n[6] = a[6] + b[6];
+  n[0] -= (spint)0x1fffffffeu;
+  n[1] -= (spint)0x1fffe0000000000u;
+  n[2] -= (spint)0x1fffffffffdfffeu;
+  n[3] += (spint)2u;
+  n[6] -= (spint)0x2000000000000u;
   carry = prop(n);
-  n[0] -= (spint)2u & carry;
-  n[1] += ((spint)0x200000000000u) & carry;
-  n[3] += ((spint)0x2000000000u) & carry;
-  n[4] += ((spint)0x1fffffffe0000u) & carry;
+  n[0] += ((spint)0x1fffffffeu) & carry;
+  n[1] += ((spint)0x1fffe0000000000u) & carry;
+  n[2] += ((spint)0x1fffffffffdfffeu) & carry;
+  n[3] -= (spint)2u & carry;
+  n[6] += ((spint)0x2000000000000u) & carry;
   (void)prop(n);
 }
 
@@ -99,11 +105,14 @@ static void inline modsub(const spint *a, const spint *b, spint *n) {
   n[2] = a[2] - b[2];
   n[3] = a[3] - b[3];
   n[4] = a[4] - b[4];
+  n[5] = a[5] - b[5];
+  n[6] = a[6] - b[6];
   carry = prop(n);
-  n[0] -= (spint)2u & carry;
-  n[1] += ((spint)0x200000000000u) & carry;
-  n[3] += ((spint)0x2000000000u) & carry;
-  n[4] += ((spint)0x1fffffffe0000u) & carry;
+  n[0] += ((spint)0x1fffffffeu) & carry;
+  n[1] += ((spint)0x1fffe0000000000u) & carry;
+  n[2] += ((spint)0x1fffffffffdfffeu) & carry;
+  n[3] -= (spint)2u & carry;
+  n[6] += ((spint)0x2000000000000u) & carry;
   (void)prop(n);
 }
 
@@ -115,161 +124,309 @@ static void inline modneg(const spint *b, spint *n) {
   n[2] = (spint)0 - b[2];
   n[3] = (spint)0 - b[3];
   n[4] = (spint)0 - b[4];
+  n[5] = (spint)0 - b[5];
+  n[6] = (spint)0 - b[6];
   carry = prop(n);
-  n[0] -= (spint)2u & carry;
-  n[1] += ((spint)0x200000000000u) & carry;
-  n[3] += ((spint)0x2000000000u) & carry;
-  n[4] += ((spint)0x1fffffffe0000u) & carry;
+  n[0] += ((spint)0x1fffffffeu) & carry;
+  n[1] += ((spint)0x1fffe0000000000u) & carry;
+  n[2] += ((spint)0x1fffffffffdfffeu) & carry;
+  n[3] -= (spint)2u & carry;
+  n[6] += ((spint)0x2000000000000u) & carry;
   (void)prop(n);
 }
 
 // Overflow limit   = 340282366920938463463374607431768211456
-// maximum possible = 102759236341273337689498043088901
+// maximum possible = 46750875217739594658946410990338056
 // Modular multiplication, c=a*b mod 2p
 static void inline modmul(const spint *a, const spint *b, spint *c) {
   dpint t = 0;
-  spint p4 = 0xffffffff0000u;
-  spint q = ((spint)1 << 52u); // q is unsaturated radix
+  spint p0 = 0xffffffffu;
+  spint p1 = 0xffff0000000000u;
+  spint p2 = 0xfffffffffeffffu;
+  spint q = ((spint)1 << 56u); // q is unsaturated radix
   spint mask = (spint)(q - (spint)1);
+  spint ndash = 0x100000001u;
   t += (dpint)a[0] * b[0];
-  spint v0 = ((spint)t & mask);
-  t >>= 52;
+  spint v0 = (((spint)t * ndash) & mask);
+  t += (dpint)v0 * (dpint)p0;
+  t >>= 56;
   t += (dpint)a[0] * b[1];
   t += (dpint)a[1] * b[0];
-  t += (dpint)(udpint)((udpint)v0 << 44u);
-  spint v1 = ((spint)t & mask);
-  t >>= 52;
+  t += (dpint)v0 * (dpint)p1;
+  spint v1 = (((spint)t * ndash) & mask);
+  t += (dpint)v1 * (dpint)p0;
+  t >>= 56;
   t += (dpint)a[0] * b[2];
   t += (dpint)a[1] * b[1];
   t += (dpint)a[2] * b[0];
-  t += (dpint)(udpint)((udpint)v1 << 44u);
-  spint v2 = ((spint)t & mask);
-  t >>= 52;
+  t += (dpint)v0 * (dpint)p2;
+  t += (dpint)v1 * (dpint)p1;
+  spint v2 = (((spint)t * ndash) & mask);
+  t += (dpint)v2 * (dpint)p0;
+  t >>= 56;
   t += (dpint)a[0] * b[3];
   t += (dpint)a[1] * b[2];
   t += (dpint)a[2] * b[1];
   t += (dpint)a[3] * b[0];
-  t += (dpint)(udpint)((udpint)v0 << 36u);
-  t += (dpint)(udpint)((udpint)v2 << 44u);
-  spint v3 = ((spint)t & mask);
-  t >>= 52;
+  t += (dpint)(spint)(q - v0);
+  t += (dpint)v1 * (dpint)p2;
+  t += (dpint)v2 * (dpint)p1;
+  spint v3 = (((spint)t * ndash) & mask);
+  t += (dpint)v3 * (dpint)p0;
+  t >>= 56;
   t += (dpint)a[0] * b[4];
   t += (dpint)a[1] * b[3];
   t += (dpint)a[2] * b[2];
   t += (dpint)a[3] * b[1];
   t += (dpint)a[4] * b[0];
-  t += (dpint)v0 * (dpint)p4;
-  t += (dpint)(udpint)((udpint)v1 << 36u);
-  t += (dpint)(udpint)((udpint)v3 << 44u);
-  spint v4 = ((spint)t & mask);
-  t >>= 52;
+  spint s = (spint)mask;
+  s -= v1;
+  t += (dpint)v2 * (dpint)p2;
+  t += (dpint)v3 * (dpint)p1;
+  t += (dpint)s;
+  spint v4 = (((spint)t * ndash) & mask);
+  t += (dpint)v4 * (dpint)p0;
+  t >>= 56;
+  t += (dpint)a[0] * b[5];
   t += (dpint)a[1] * b[4];
   t += (dpint)a[2] * b[3];
   t += (dpint)a[3] * b[2];
   t += (dpint)a[4] * b[1];
-  t += (dpint)v1 * (dpint)p4;
-  t += (dpint)(udpint)((udpint)v2 << 36u);
-  t += (dpint)(udpint)((udpint)v4 << 44u);
-  c[0] = ((spint)t & mask);
-  t >>= 52;
+  t += (dpint)a[5] * b[0];
+  s = (spint)mask;
+  s -= v2;
+  t += (dpint)v3 * (dpint)p2;
+  t += (dpint)v4 * (dpint)p1;
+  t += (dpint)s;
+  spint v5 = (((spint)t * ndash) & mask);
+  t += (dpint)v5 * (dpint)p0;
+  t >>= 56;
+  t += (dpint)a[0] * b[6];
+  t += (dpint)a[1] * b[5];
   t += (dpint)a[2] * b[4];
   t += (dpint)a[3] * b[3];
   t += (dpint)a[4] * b[2];
-  t += (dpint)v2 * (dpint)p4;
-  t += (dpint)(udpint)((udpint)v3 << 36u);
-  c[1] = ((spint)t & mask);
-  t >>= 52;
+  t += (dpint)a[5] * b[1];
+  t += (dpint)a[6] * b[0];
+  s = (spint)mask;
+  t += (dpint)(udpint)((udpint)v0 << 48u);
+  s -= v3;
+  t += (dpint)v4 * (dpint)p2;
+  t += (dpint)v5 * (dpint)p1;
+  t += (dpint)s;
+  spint v6 = (((spint)t * ndash) & mask);
+  t += (dpint)v6 * (dpint)p0;
+  t >>= 56;
+  t += (dpint)a[1] * b[6];
+  t += (dpint)a[2] * b[5];
   t += (dpint)a[3] * b[4];
   t += (dpint)a[4] * b[3];
-  t += (dpint)v3 * (dpint)p4;
-  t += (dpint)(udpint)((udpint)v4 << 36u);
-  c[2] = ((spint)t & mask);
-  t >>= 52;
+  t += (dpint)a[5] * b[2];
+  t += (dpint)a[6] * b[1];
+  s = (spint)mask;
+  t += (dpint)(udpint)((udpint)v1 << 48u);
+  s -= v4;
+  t += (dpint)v5 * (dpint)p2;
+  t += (dpint)v6 * (dpint)p1;
+  t += (dpint)s;
+  c[0] = ((spint)t & mask);
+  t >>= 56;
+  t += (dpint)a[2] * b[6];
+  t += (dpint)a[3] * b[5];
   t += (dpint)a[4] * b[4];
-  t += (dpint)v4 * (dpint)p4;
+  t += (dpint)a[5] * b[3];
+  t += (dpint)a[6] * b[2];
+  s = (spint)mask;
+  t += (dpint)(udpint)((udpint)v2 << 48u);
+  s -= v5;
+  t += (dpint)v6 * (dpint)p2;
+  t += (dpint)s;
+  c[1] = ((spint)t & mask);
+  t >>= 56;
+  t += (dpint)a[3] * b[6];
+  t += (dpint)a[4] * b[5];
+  t += (dpint)a[5] * b[4];
+  t += (dpint)a[6] * b[3];
+  s = (spint)mask;
+  t += (dpint)(udpint)((udpint)v3 << 48u);
+  s -= v6;
+  t += (dpint)s;
+  c[2] = ((spint)t & mask);
+  t >>= 56;
+  t += (dpint)a[4] * b[6];
+  t += (dpint)a[5] * b[5];
+  t += (dpint)a[6] * b[4];
+  s = (spint)mask;
+  t += (dpint)(udpint)((udpint)v4 << 48u);
+  t += (dpint)s;
   c[3] = ((spint)t & mask);
-  t >>= 52;
-  c[4] = (spint)t;
+  t >>= 56;
+  t += (dpint)a[5] * b[6];
+  t += (dpint)a[6] * b[5];
+  s = (spint)mask;
+  t += (dpint)(udpint)((udpint)v5 << 48u);
+  t += (dpint)s;
+  c[4] = ((spint)t & mask);
+  t >>= 56;
+  t += (dpint)a[6] * b[6];
+  s = (spint)mask;
+  t += (dpint)(udpint)((udpint)v6 << 48u);
+  t += (dpint)s;
+  c[5] = ((spint)t & mask);
+  t >>= 56;
+  t -= (dpint)1u;
+  c[6] = (spint)t;
 }
 
 // Modular squaring, c=a*a  mod 2p
 static void inline modsqr(const spint *a, spint *c) {
   udpint tot;
   udpint t = 0;
-  spint p4 = 0xffffffff0000u;
-  spint q = ((spint)1 << 52u); // q is unsaturated radix
+  spint p0 = 0xffffffffu;
+  spint p1 = 0xffff0000000000u;
+  spint p2 = 0xfffffffffeffffu;
+  spint q = ((spint)1 << 56u); // q is unsaturated radix
   spint mask = (spint)(q - (spint)1);
+  spint ndash = 0x100000001u;
   tot = (udpint)a[0] * a[0];
   t = tot;
-  spint v0 = ((spint)t & mask);
-  t >>= 52;
+  spint v0 = (((spint)t * ndash) & mask);
+  t += (udpint)v0 * p0;
+  t >>= 56;
   tot = (udpint)a[0] * a[1];
   tot *= 2;
   t += tot;
-  t += (udpint)v0 << 44u;
-  spint v1 = ((spint)t & mask);
-  t >>= 52;
+  t += (udpint)v0 * p1;
+  spint v1 = (((spint)t * ndash) & mask);
+  t += (udpint)v1 * p0;
+  t >>= 56;
   tot = (udpint)a[0] * a[2];
   tot *= 2;
   tot += (udpint)a[1] * a[1];
   t += tot;
-  t += (udpint)v1 << 44u;
-  spint v2 = ((spint)t & mask);
-  t >>= 52;
+  t += (udpint)v0 * p2;
+  t += (udpint)v1 * p1;
+  spint v2 = (((spint)t * ndash) & mask);
+  t += (udpint)v2 * p0;
+  t >>= 56;
   tot = (udpint)a[0] * a[3];
   tot += (udpint)a[1] * a[2];
   tot *= 2;
   t += tot;
-  t += (udpint)v0 << 36u;
-  t += (udpint)v2 << 44u;
-  spint v3 = ((spint)t & mask);
-  t >>= 52;
+  t += (udpint)(spint)(q - v0);
+  t += (udpint)v1 * p2;
+  t += (udpint)v2 * p1;
+  spint v3 = (((spint)t * ndash) & mask);
+  t += (udpint)v3 * p0;
+  t >>= 56;
   tot = (udpint)a[0] * a[4];
   tot += (udpint)a[1] * a[3];
   tot *= 2;
   tot += (udpint)a[2] * a[2];
   t += tot;
-  t += (udpint)v0 * p4;
-  t += (udpint)v1 << 36u;
-  t += (udpint)v3 << 44u;
-  spint v4 = ((spint)t & mask);
-  t >>= 52;
-  tot = (udpint)a[1] * a[4];
+  spint s = (spint)mask;
+  s -= v1;
+  t += (udpint)v2 * p2;
+  t += (udpint)v3 * p1;
+  t += (udpint)s;
+  spint v4 = (((spint)t * ndash) & mask);
+  t += (udpint)v4 * p0;
+  t >>= 56;
+  tot = (udpint)a[0] * a[5];
+  tot += (udpint)a[1] * a[4];
   tot += (udpint)a[2] * a[3];
   tot *= 2;
   t += tot;
-  t += (udpint)v1 * p4;
-  t += (udpint)v2 << 36u;
-  t += (udpint)v4 << 44u;
-  c[0] = ((spint)t & mask);
-  t >>= 52;
-  tot = (udpint)a[2] * a[4];
+  s = (spint)mask;
+  s -= v2;
+  t += (udpint)v3 * p2;
+  t += (udpint)v4 * p1;
+  t += (udpint)s;
+  spint v5 = (((spint)t * ndash) & mask);
+  t += (udpint)v5 * p0;
+  t >>= 56;
+  tot = (udpint)a[0] * a[6];
+  tot += (udpint)a[1] * a[5];
+  tot += (udpint)a[2] * a[4];
   tot *= 2;
   tot += (udpint)a[3] * a[3];
   t += tot;
-  t += (udpint)v2 * p4;
-  t += (udpint)v3 << 36u;
-  c[1] = ((spint)t & mask);
-  t >>= 52;
-  tot = (udpint)a[3] * a[4];
+  s = (spint)mask;
+  t += (udpint)v0 << 48u;
+  s -= v3;
+  t += (udpint)v4 * p2;
+  t += (udpint)v5 * p1;
+  t += (udpint)s;
+  spint v6 = (((spint)t * ndash) & mask);
+  t += (udpint)v6 * p0;
+  t >>= 56;
+  tot = (udpint)a[1] * a[6];
+  tot += (udpint)a[2] * a[5];
+  tot += (udpint)a[3] * a[4];
   tot *= 2;
   t += tot;
-  t += (udpint)v3 * p4;
-  t += (udpint)v4 << 36u;
-  c[2] = ((spint)t & mask);
-  t >>= 52;
-  tot = (udpint)a[4] * a[4];
+  s = (spint)mask;
+  t += (udpint)v1 << 48u;
+  s -= v4;
+  t += (udpint)v5 * p2;
+  t += (udpint)v6 * p1;
+  t += (udpint)s;
+  c[0] = ((spint)t & mask);
+  t >>= 56;
+  tot = (udpint)a[2] * a[6];
+  tot += (udpint)a[3] * a[5];
+  tot *= 2;
+  tot += (udpint)a[4] * a[4];
   t += tot;
-  t += (udpint)v4 * p4;
+  s = (spint)mask;
+  t += (udpint)v2 << 48u;
+  s -= v5;
+  t += (udpint)v6 * p2;
+  t += (udpint)s;
+  c[1] = ((spint)t & mask);
+  t >>= 56;
+  tot = (udpint)a[3] * a[6];
+  tot += (udpint)a[4] * a[5];
+  tot *= 2;
+  t += tot;
+  s = (spint)mask;
+  t += (udpint)v3 << 48u;
+  s -= v6;
+  t += (udpint)s;
+  c[2] = ((spint)t & mask);
+  t >>= 56;
+  tot = (udpint)a[4] * a[6];
+  tot *= 2;
+  tot += (udpint)a[5] * a[5];
+  t += tot;
+  s = (spint)mask;
+  t += (udpint)v4 << 48u;
+  t += (udpint)s;
   c[3] = ((spint)t & mask);
-  t >>= 52;
-  c[4] = (spint)t;
+  t >>= 56;
+  tot = (udpint)a[5] * a[6];
+  tot *= 2;
+  t += tot;
+  s = (spint)mask;
+  t += (udpint)v5 << 48u;
+  t += (udpint)s;
+  c[4] = ((spint)t & mask);
+  t >>= 56;
+  tot = (udpint)a[6] * a[6];
+  t += tot;
+  s = (spint)mask;
+  t += (udpint)v6 << 48u;
+  t += (udpint)s;
+  c[5] = ((spint)t & mask);
+  t >>= 56;
+  t -= 1u;
+  c[6] = (spint)t;
 }
 
 // copy
 static void inline modcpy(const spint *a, spint *c) {
   int i;
-  for (i = 0; i < 5; i++) {
+  for (i = 0; i < 7; i++) {
     c[i] = a[i];
   }
 }
@@ -284,41 +441,52 @@ static void modnsqr(spint *a, int n) {
 
 // Calculate progenitor
 static void modpro(const spint *w, spint *z) {
-  spint x[5];
-  spint t0[5];
-  spint t1[5];
+  spint x[7];
+  spint t0[7];
+  spint t1[7];
+  spint t2[7];
+  spint t3[7];
   modcpy(w, x);
   modsqr(x, z);
   modmul(x, z, z);
   modsqr(z, z);
-  modmul(x, z, z);
+  modmul(x, z, t1);
+  modcpy(t1, z);
+  modnsqr(z, 3);
+  modmul(t1, z, z);
   modcpy(z, t0);
-  modnsqr(t0, 3);
+  modnsqr(t0, 6);
   modmul(z, t0, t0);
-  modcpy(t0, t1);
-  modnsqr(t1, 6);
-  modmul(t0, t1, t0);
-  modnsqr(t0, 3);
+  modcpy(t0, t2);
+  modnsqr(t2, 12);
+  modmul(t0, t2, t0);
+  modnsqr(t0, 6);
   modmul(z, t0, z);
   modsqr(z, t0);
+  modmul(x, t0, t2);
+  modsqr(t2, t0);
   modmul(x, t0, t0);
-  modcpy(t0, t1);
-  modnsqr(t1, 16);
+  modcpy(t0, t3);
+  modnsqr(t3, 31);
+  modmul(t2, t3, t2);
+  modcpy(t2, t3);
+  modnsqr(t3, 63);
+  modmul(t2, t3, t2);
+  modcpy(t2, t3);
+  modnsqr(t3, 126);
+  modmul(t2, t3, t2);
+  modnsqr(t2, 3);
+  modmul(t1, t2, t1);
+  modnsqr(t1, 33);
   modmul(t0, t1, t0);
-  modnsqr(t0, 15);
-  modmul(z, t0, z);
-  modnsqr(t0, 17);
-  modmul(x, t0, t0);
-  modnsqr(t0, 143);
-  modmul(z, t0, t0);
-  modnsqr(t0, 47);
+  modnsqr(t0, 94);
   modmul(z, t0, z);
 }
 
 // calculate inverse, provide progenitor h if available
 static void modinv(const spint *x, const spint *h, spint *z) {
-  spint s[5];
-  spint t[5];
+  spint s[7];
+  spint t[7];
   if (h == NULL) {
     modpro(x, t);
   } else {
@@ -331,17 +499,17 @@ static void modinv(const spint *x, const spint *h, spint *z) {
 
 // Convert m to n-residue form, n=nres(m)
 static void nres(const spint *m, spint *n) {
-  const spint c[5] = {0x300u, 0xffffffff00000u, 0xffffefffffffbu,
-                      0xfdfffffffffffu, 0x4ffffffu};
+  const spint c[7] = {0xfe000000010000u, 0xffffffu, 0x2u, 0xfffffffe00u,
+                      0x1000000020000u,  0x0u,      0x0u};
   modmul(m, c, n);
 }
 
 // Convert n back to normal form, m=redc(n)
 static void redc(const spint *n, spint *m) {
   int i;
-  spint c[5];
+  spint c[7];
   c[0] = 1;
-  for (i = 1; i < 5; i++) {
+  for (i = 1; i < 7; i++) {
     c[i] = 0;
   }
   modmul(n, c, m);
@@ -351,10 +519,10 @@ static void redc(const spint *n, spint *m) {
 // reduce double length input to n-residue
 static void modred(const spint *n, spint *b) {
   int i;
-  spint t[5];
-  for (i = 0; i < 5; i++) {
+  spint t[7];
+  for (i = 0; i < 7; i++) {
     b[i] = n[i];
-    t[i] = n[i + 5];
+    t[i] = n[i + 7];
   }
   nres(t, t);
   modadd(b, t, b);
@@ -364,34 +532,34 @@ static void modred(const spint *n, spint *b) {
 // is unity?
 static int modis1(const spint *a) {
   int i;
-  spint c[5];
+  spint c[7];
   spint c0;
   spint d = 0;
   redc(a, c);
-  for (i = 1; i < 5; i++) {
+  for (i = 1; i < 7; i++) {
     d |= c[i];
   }
   c0 = (spint)c[0];
-  return ((spint)1 & ((d - (spint)1) >> 52u) &
-          (((c0 ^ (spint)1) - (spint)1) >> 52u));
+  return ((spint)1 & ((d - (spint)1) >> 56u) &
+          (((c0 ^ (spint)1) - (spint)1) >> 56u));
 }
 
 // is zero?
 static int modis0(const spint *a) {
   int i;
-  spint c[5];
+  spint c[7];
   spint d = 0;
   redc(a, c);
-  for (i = 0; i < 5; i++) {
+  for (i = 0; i < 7; i++) {
     d |= c[i];
   }
-  return ((spint)1 & ((d - (spint)1) >> 52u));
+  return ((spint)1 & ((d - (spint)1) >> 56u));
 }
 
 // set to zero
 static void modzer(spint *a) {
   int i;
-  for (i = 0; i < 5; i++) {
+  for (i = 0; i < 7; i++) {
     a[i] = 0;
   }
 }
@@ -400,7 +568,7 @@ static void modzer(spint *a) {
 static void modone(spint *a) {
   int i;
   a[0] = 1;
-  for (i = 1; i < 5; i++) {
+  for (i = 1; i < 7; i++) {
     a[i] = 0;
   }
   nres(a, a);
@@ -410,7 +578,7 @@ static void modone(spint *a) {
 static void modint(int x, spint *a) {
   int i;
   a[0] = (spint)x;
-  for (i = 1; i < 5; i++) {
+  for (i = 1; i < 7; i++) {
     a[i] = 0;
   }
   nres(a, a);
@@ -418,7 +586,7 @@ static void modint(int x, spint *a) {
 
 // Test for quadratic residue
 static int modqr(const spint *h, const spint *x) {
-  spint r[5];
+  spint r[7];
   if (h == NULL) {
     modpro(x, r);
     modsqr(r, r);
@@ -437,7 +605,7 @@ static int modcmv(int d, const spint *g, spint *f) {
   spint r = f[0] ^ g[1];
   spint ra = r + r;
   ra >>= 1;
-  for (i = 0; i < 5; i++) {
+  for (i = 0; i < 7; i++) {
     spint t = (f[i] ^ g[i]) & c;
     t ^= r;
     spint e = f[i] ^ t;
@@ -455,7 +623,7 @@ static int modcsw(int d, spint *g, spint *f) {
   spint r = f[0] ^ g[1];
   spint ra = r + r;
   ra >>= 1;
-  for (i = 0; i < 5; i++) {
+  for (i = 0; i < 7; i++) {
     spint t = (f[i] ^ g[i]) & c;
     t ^= r;
     spint e = f[i] ^ t;
@@ -470,8 +638,8 @@ static int modcsw(int d, spint *g, spint *f) {
 
 // Modular square root, provide progenitor h if available, NULL if not
 static void modsqrt(const spint *x, const spint *h, spint *r) {
-  spint s[5];
-  spint y[5];
+  spint s[7];
+  spint y[7];
   if (h == NULL) {
     modpro(x, y);
   } else {
@@ -484,30 +652,30 @@ static void modsqrt(const spint *x, const spint *h, spint *r) {
 // shift left by less than a word
 static void modshl(unsigned int n, spint *a) {
   int i;
-  a[4] = ((a[4] << n)) | (a[3] >> (52u - n));
-  for (i = 3; i > 0; i--) {
-    a[i] = ((a[i] << n) & (spint)0xfffffffffffff) | (a[i - 1] >> (52u - n));
+  a[6] = ((a[6] << n)) | (a[5] >> (56u - n));
+  for (i = 5; i > 0; i--) {
+    a[i] = ((a[i] << n) & (spint)0xffffffffffffff) | (a[i - 1] >> (56u - n));
   }
-  a[0] = (a[0] << n) & (spint)0xfffffffffffff;
+  a[0] = (a[0] << n) & (spint)0xffffffffffffff;
 }
 
 // shift right by less than a word. Return shifted out part
 static int modshr(unsigned int n, spint *a) {
   int i;
   spint r = a[0] & (((spint)1 << n) - (spint)1);
-  for (i = 0; i < 4; i++) {
-    a[i] = (a[i] >> n) | ((a[i + 1] << (52u - n)) & (spint)0xfffffffffffff);
+  for (i = 0; i < 6; i++) {
+    a[i] = (a[i] >> n) | ((a[i + 1] << (56u - n)) & (spint)0xffffffffffffff);
   }
-  a[4] = a[4] >> n;
+  a[6] = a[6] >> n;
   return r;
 }
 
 // export to byte array
 static void modexp(const spint *a, char *b) {
   int i;
-  spint c[5];
+  spint c[7];
   redc(a, c);
-  for (i = 31; i >= 0; i--) {
+  for (i = 47; i >= 0; i--) {
     b[i] = c[0] & (spint)0xff;
     (void)modshr(8, c);
   }
@@ -517,10 +685,10 @@ static void modexp(const spint *a, char *b) {
 // returns 1 if in range, else 0
 static int modimp(const char *b, spint *a) {
   int i, res;
-  for (i = 0; i < 5; i++) {
+  for (i = 0; i < 7; i++) {
     a[i] = 0;
   }
-  for (i = 0; i < 32; i++) {
+  for (i = 0; i < 48; i++) {
     modshl(8, a);
     a[0] += (spint)(unsigned char)b[i];
   }
@@ -531,19 +699,19 @@ static int modimp(const char *b, spint *a) {
 
 // determine sign
 static int modsign(const spint *a) {
-  spint c[5];
+  spint c[7];
   redc(a, c);
   return c[0] % 2;
 }
 
 // return true if equal
 static int modcmp(const spint *a, const spint *b) {
-  spint c[5], d[5];
+  spint c[7], d[7];
   int i, eq = 1;
   redc(a, c);
   redc(b, d);
-  for (i = 0; i < 5; i++) {
-    eq &= (((c[i] ^ d[i]) - 1) >> 52) & 1;
+  for (i = 0; i < 7; i++) {
+    eq &= (((c[i] ^ d[i]) - 1) >> 56) & 1;
   }
   return eq;
 }
@@ -551,7 +719,7 @@ static int modcmp(const spint *a, const spint *b) {
 
 /*** End of automatically generated code ***/
 
-#include "nist256curve.h"
+#include "nist384curve.h"
 
 #define BYTES Nbytes
 #define LIMBS Nlimbs
@@ -559,12 +727,14 @@ static int modcmp(const spint *a, const spint *b) {
 
 /*** Insert automatically generated curve definition curve.c here ***/
 
+
 #define COF 1
 #define CONSTANT_A -3
-const spint constant_b[5]={0xdf6229c4bddfd,0xca8843090d89c,0x212ed6acf005c,0x83415a220abf7,0xc30061dd4874};
-const spint constant_b3[5]={0x9e267d4e399f9,0x5d98c91b289d6,0x638c8406d0116,0x89c20e66203e5,0x49012599d95d};
-const spint constant_x[5]={0x30d418a9143c1,0xc4fedb60179e7,0x62251075ba95f,0x5c669fb732b77,0x8905f76b5375};
-const spint constant_y[5]={0x5357ce95560a8,0x43a19e45cddf2,0x21f3258b4ab8e,0xd8552e88688dd,0x571ff18a5885};
+const spint constant_b[7]={0x8870d0412dcccd,0xd9474c32ec0811,0x1920022fc429ad,0x938ae277f2209b,0x2094e3374bee94,0xf9b62b21f41f02,0x8114b604fbf};
+const spint constant_b3[7]={0x995270c3896667,0x8bd5e498c41834,0x4b60068f4c7d09,0xbaa0a767d661d1,0x61bea9a5e3cbbd,0xed228165dc5d06,0x1833e220ef3f};
+const spint constant_x[7]={0x7565fcc0b5284d,0xe2edd6ce383dd0,0x541b4d6e6de378,0xa30eff879c3afc,0xde2b6454868459,0x13812ff723614e,0x3aadc2299e15};
+const spint constant_y[7]={0x3dad2003a4fe2b,0xbfa6b4a9ac2304,0x2e83b050ccbfa8,0xf4ffd98bade756,0xa840c6c3521968,0xe9dd8002263969,0x78abc25a15c5};
+
 
 
 /*** End of automatically generated code ***/
@@ -1074,7 +1244,7 @@ void ecnmul2(const char *e,point *P,const char *f,point *Q,point *R)
     ecncpy(Q,&W[2]); ecnsub(P,&W[2]);  // Q-P
     ecncpy(Q,&W[4]); ecnadd(P,&W[4]);  // Q+P
 
-    dnaf(e,f,(char *)w);
+    dnaf(e,f,w);
 
     i=8*Nbytes+7;
     while (w[i]==0) i--; // ignore leading zeros
@@ -1089,4 +1259,3 @@ void ecnmul2(const char *e,point *P,const char *f,point *Q,point *R)
         i--;
     }
 }
-
