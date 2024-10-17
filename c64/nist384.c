@@ -8,7 +8,7 @@
 //
 // code for 32/64-bit processor for NIST curve can be generated  by 
 //
-// python curve.py 32/64 NIST256
+// python curve.py 32/64 NIST384
 //
 
 // make sure decoration and generic are both set to False in monty.py or pseudo.py

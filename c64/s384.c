@@ -1,5 +1,5 @@
 
-// ECDSA Implementation for curve P-256
+// ECDSA Implementation for curve P-384
 // see https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf
 // python curve.py 64 NIST384
 // This completes weierstrass.c for this curve. 
@@ -10,7 +10,7 @@
 
 #include "nist384curve.h"   // elliptic curve API
 
-/*** Insert automatically generated code for P-256 prime group order group.c here ***/
+/*** Insert automatically generated code for P-384 prime group order group.c here ***/
 /* Note that much of this code is not needed and can be deleted */
 
 
