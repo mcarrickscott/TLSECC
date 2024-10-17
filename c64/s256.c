@@ -744,12 +744,12 @@ static void output(spint *x) {
 // output a point (x,y)
 void outputxy(point *P)
 {
-    if (ecnisinf(P)) {
+    if (ecn256isinf(P)) {
         printf("P= O\n");
     } else {
         char x[BYTES],y[BYTES];
         char buff[(2*BYTES)+1];
-        ecnget(P,x,y);
+        ecn256get(P,x,y);
         toHex(BYTES,x,buff);
         printf("Px= "); puts(buff);
         toHex(BYTES,y,buff);
@@ -804,15 +804,15 @@ static void reduce(char *h,spint *r)
 void NIST256_KEY_GEN(int compress,char *prv,char *pub)
 {
     point P;
-    ecngen(&P);
+    ecn256gen(&P);
 
-    ecnmul(prv,&P); 
+    ecn256mul(prv,&P); 
 
     if (compress) {
-        pub[0]=0x02+ecnget(&P,&pub[1],NULL); // 0x02 or 0x03
+        pub[0]=0x02+ecn256get(&P,&pub[1],NULL); // 0x02 or 0x03
     } else {
         pub[0]=0x04; // no compression
-        ecnget(&P,&pub[1],&pub[BYTES+1]);  // get x and y
+        ecn256get(&P,&pub[1],&pub[BYTES+1]);  // get x and y
     }
 }
 
@@ -837,15 +837,15 @@ void NIST256_SIGN(char *prv,char *ran,int mlen,char *m,char *sig)
     modimp(h,e);
 #endif
 
-    ecngen(&R);
+    ecn256gen(&R);
     modimp(prv,s);
 
     reduce(ran,k);
     modexp(k,h);
-    ecnmul(h,&R);
+    ecn256mul(h,&R);
     modinv(k,NULL,k);
 
-    ecnget(&R,h,NULL);
+    ecn256get(&R,h,NULL);
     modimp(h,r);
 
     modmul(s,r,s);
@@ -877,7 +877,7 @@ int NIST256_VERIFY(char *pub,int mlen,char *m,char *sig)
     modimp(h,e);
 #endif
 
-    ecngen(&G);
+    ecn256gen(&G);
 
 // import from signature
     if (!modimp(sig,r)) return 0; // if not in range
@@ -889,15 +889,15 @@ int NIST256_VERIFY(char *pub,int mlen,char *m,char *sig)
     modmul(s,e,s); modexp(s,u); 
 
     if (pub[0]==0x04) {
-        ecnset(0,&pub[1],&pub[BYTES+1],&Q);
+        ecn256set(0,&pub[1],&pub[BYTES+1],&Q);
     } else {
-        ecnset((int)pub[0]&1,&pub[1],NULL,&Q);
+        ecn256set((int)pub[0]&1,&pub[1],NULL,&Q);
     }
 
-    ecnmul2(u,&G,v,&Q,&Q);
-    if (ecnisinf(&Q)) return 0;
+    ecn256mul2(u,&G,v,&Q,&Q);
+    if (ecn256isinf(&Q)) return 0;
 
-    ecnget(&Q,rb,NULL);
+    ecn256get(&Q,rb,NULL);
 
     res=1;
     for (i=0;i<BYTES;i++) {
@@ -910,13 +910,13 @@ int NIST256_VERIFY(char *pub,int mlen,char *m,char *sig)
 void NIST256_KEY_PAIR(int compress,char *SK,char *PK)
 {
     point P;
-    ecngen(&P);
-    ecnmul(SK,&P);
+    ecn256gen(&P);
+    ecn256mul(SK,&P);
     if (compress) {
-        PK[0]=0x02+ecnget(&P,&PK[1],NULL); // 0x02 or 0x03
+        PK[0]=0x02+ecn256get(&P,&PK[1],NULL); // 0x02 or 0x03
     } else {
         PK[0]=0x04; // no compression
-        ecnget(&P,&PK[1],&PK[BYTES+1]);  // get x and y
+        ecn256get(&P,&PK[1],&PK[BYTES+1]);  // get x and y
     }
 }
 
@@ -925,14 +925,14 @@ int NIST256_SHARED_SECRET(char *SK,char *PK,char *SS)
     point P;
 
     if (PK[0]==0x04) {
-        ecnset(0,&PK[1],&PK[BYTES+1],&P);
+        ecn256set(0,&PK[1],&PK[BYTES+1],&P);
     } else {
-        ecnset((int)PK[0]&1,&PK[1],NULL,&P);
+        ecn256set((int)PK[0]&1,&PK[1],NULL,&P);
     }
 
-    ecnmul(SK,&P);
+    ecn256mul(SK,&P);
 
-    ecnget(&P,SS,NULL);  // x coordinate
-    if (ecnisinf(&P)) return 0;
+    ecn256get(&P,SS,NULL);  // x coordinate
+    if (ecn256isinf(&P)) return 0;
     return 1;
 }

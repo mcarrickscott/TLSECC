@@ -578,7 +578,7 @@ static int teq(int b, int c)
 }
 
 // copy point
-void ecncpy(point *Q,point *P)
+void ecn256cpy(point *Q,point *P)
 {
     modcpy(Q->x,P->x);
     modcpy(Q->y,P->y);
@@ -586,14 +586,14 @@ void ecncpy(point *Q,point *P)
 }
 
 // negate P
-void ecnneg(point *P)
+void ecn256neg(point *P)
 {
     modneg(P->y,P->y);
 }
 
 // add Q to P
 // complete formulae from https://eprint.iacr.org/2015/1060
-void ecnadd(point *Q,point *P)
+void ecn256add(point *Q,point *P)
 {
     spint B[Nlimbs],T0[Nlimbs],T1[Nlimbs],T2[Nlimbs],T3[Nlimbs],T4[Nlimbs];
 
@@ -702,16 +702,16 @@ void ecnadd(point *Q,point *P)
 }
 
 // subtract Q from P
-void ecnsub(point *Q,point *P)
+void ecn256sub(point *Q,point *P)
 {
     point W;
-    ecncpy(Q,&W); ecnneg(&W);
-    ecnadd(&W,P);
+    ecn256cpy(Q,&W); ecn256neg(&W);
+    ecn256add(&W,P);
 }
 
 // double P
 // complete formuale from https://eprint.iacr.org/2015/1060
-void ecndbl(point *P)
+void ecn256dbl(point *P)
 {
     spint B[Nlimbs],T0[Nlimbs],T1[Nlimbs],T2[Nlimbs],T3[Nlimbs],T4[Nlimbs];
 
@@ -807,7 +807,7 @@ void ecndbl(point *P)
 }
 
 // set to infinity
-void ecninf(point *P)
+void ecn256inf(point *P)
 {
     modzer(P->x);
     modone(P->y);
@@ -815,13 +815,13 @@ void ecninf(point *P)
 }
 
 // test for infinity
-int ecnisinf(point *P)
+int ecn256isinf(point *P)
 {
     return (modis0(P->x) && modis0(P->z));
 }
 
 // set to affine
-void ecnaffine(point *P)
+void ecn256affine(point *P)
 {
     spint I[Nlimbs];
     modinv(P->z,NULL,I);
@@ -831,7 +831,7 @@ void ecnaffine(point *P)
 }
 
 // move Q to P if d=1
-void ecncmv(int d,point *Q,point *P)
+void ecn256cmv(int d,point *Q,point *P)
 {
     modcmv(d,Q->x,P->x);
     modcmv(d,Q->y,P->y);
@@ -839,7 +839,7 @@ void ecncmv(int d,point *Q,point *P)
 }
 
 // return 1 if equal, else 0
-int ecncmp(point *P,point *Q)
+int ecn256cmp(point *P,point *Q)
 {
     spint a[Nlimbs],b[Nlimbs];
     modmul(P->x,Q->z,a);
@@ -852,10 +852,10 @@ int ecncmp(point *P,point *Q)
 }
 
 // extract (x,y) from point, if y is NULL compress and just return x and sign of y
-int ecnget(point *P,char *x,char *y)
+int ecn256get(point *P,char *x,char *y)
 {
     spint X[Nlimbs],Y[Nlimbs];
-    ecnaffine(P);
+    ecn256affine(P);
 
     modcpy(P->x,X);
     modexp(X,x);
@@ -870,7 +870,7 @@ int ecnget(point *P,char *x,char *y)
         return modsign(P->y);
 }
 /*
-int ecngetxyz(point *P,char *x,char *y,char *z)
+int ecn256getxyz(point *P,char *x,char *y,char *z)
 {
     spint X[Nlimbs],Y[Nlimbs];
     modexp(P->x,x);
@@ -912,14 +912,14 @@ static void setxy(int s,const spint *x,const spint *y,point *P)
             modcpy(y,P->y);
             modone(P->z);
         } else {
-            ecninf(P);
+            ecn256inf(P);
         }
         return;
     }
     modpro(V,H);
     if (!modqr(H,V))
     { // point not on curve
-        ecninf(P);
+        ecn256inf(P);
         return;
     }
     modsqrt(V,H,P->y);
@@ -930,11 +930,11 @@ static void setxy(int s,const spint *x,const spint *y,point *P)
 }    
 
 // multiply point by small curve cofactor (here assumed to be 1)
-void ecncof(point *P)
+void ecn256cof(point *P)
 {}
 
 // api visible version, x and y are big endian byte arrays
-void ecnset(int s,const char *x,const char *y,point *P)
+void ecn256set(int s,const char *x,const char *y,point *P)
 {
     spint X[Nlimbs],Y[Nlimbs];
     modimp(x,X);
@@ -948,7 +948,7 @@ void ecnset(int s,const char *x,const char *y,point *P)
 }
 
 // set generator
-void ecngen(point *P)
+void ecn256gen(point *P)
 {
 #ifdef CONSTANT_X
     spint X[Nlimbs];
@@ -966,19 +966,19 @@ static void select(int b,point W[],point *P)
     int m = b >> TOPBIT;
     int babs = (b ^ m) - m;
 
-    ecncmv(teq(babs, 0),&W[0],P); // conditional move
-    ecncmv(teq(babs, 1),&W[1],P); // conditional move
-    ecncmv(teq(babs, 2),&W[2],P); // conditional move
-    ecncmv(teq(babs, 3),&W[3],P); // conditional move
-    ecncmv(teq(babs, 4),&W[4],P); // conditional move
-    ecncmv(teq(babs, 5),&W[5],P); // conditional move
-    ecncmv(teq(babs, 6),&W[6],P); // conditional move
-    ecncmv(teq(babs, 7),&W[7],P); // conditional move
-    ecncmv(teq(babs, 8),&W[8],P); // conditional move
+    ecn256cmv(teq(babs, 0),&W[0],P); // conditional move
+    ecn256cmv(teq(babs, 1),&W[1],P); // conditional move
+    ecn256cmv(teq(babs, 2),&W[2],P); // conditional move
+    ecn256cmv(teq(babs, 3),&W[3],P); // conditional move
+    ecn256cmv(teq(babs, 4),&W[4],P); // conditional move
+    ecn256cmv(teq(babs, 5),&W[5],P); // conditional move
+    ecn256cmv(teq(babs, 6),&W[6],P); // conditional move
+    ecn256cmv(teq(babs, 7),&W[7],P); // conditional move
+    ecn256cmv(teq(babs, 8),&W[8],P); // conditional move
     
-    ecncpy(P,&MP);
-    ecnneg(&MP);  // minus P
-    ecncmv((int)(m & 1),&MP,P);
+    ecn256cpy(P,&MP);
+    ecn256neg(&MP);  // minus P
+    ecn256cmv((int)(m & 1),&MP,P);
 }
 
 // convert to double naf form
@@ -1013,21 +1013,21 @@ static void dnaf(const char *e,const char *f, char *w)
 
 // multiply point by scalar
 // constant time
-void ecnmul(const char *e,point *P) 
+void ecn256mul(const char *e,point *P) 
 {
     int i,j;
     point Q,W[9];
     signed char w[2*Nbytes+1];
 
-    ecninf(&W[0]);                         // O
-    ecncpy(P,&W[1]);                       // P
-    ecncpy(P,&W[2]); ecndbl(&W[2]);        // 2P
-    ecncpy(&W[2],&W[3]); ecnadd(P,&W[3]);  // 3P
-    ecncpy(&W[2],&W[4]); ecndbl(&W[4]);    // 4P
-    ecncpy(&W[4],&W[5]); ecnadd(P,&W[5]);  // 5P
-    ecncpy(&W[3],&W[6]); ecndbl(&W[6]);    // 6P
-    ecncpy(&W[6],&W[7]); ecnadd(P,&W[7]);  // 7P
-    ecncpy(&W[4],&W[8]); ecndbl(&W[8]);    // 8P
+    ecn256inf(&W[0]);                         // O
+    ecn256cpy(P,&W[1]);                       // P
+    ecn256cpy(P,&W[2]); ecn256dbl(&W[2]);        // 2P
+    ecn256cpy(&W[2],&W[3]); ecn256add(P,&W[3]);  // 3P
+    ecn256cpy(&W[2],&W[4]); ecn256dbl(&W[4]);    // 4P
+    ecn256cpy(&W[4],&W[5]); ecn256add(P,&W[5]);  // 5P
+    ecn256cpy(&W[3],&W[6]); ecn256dbl(&W[6]);    // 6P
+    ecn256cpy(&W[6],&W[7]); ecn256add(P,&W[7]);  // 7P
+    ecn256cpy(&W[4],&W[8]); ecn256dbl(&W[8]);    // 8P
 
 // convert exponent to signed digit
     for (i=j=0;i<Nbytes;i++,j+=2)
@@ -1053,38 +1053,38 @@ void ecnmul(const char *e,point *P)
     for (i = 2*Nbytes - 1; i >= 0; i--)
     {
         select(w[i],W,&Q);
-        ecndbl(P);
-        ecndbl(P);
-        ecndbl(P);
-        ecndbl(P);
-        ecnadd(&Q,P);
+        ecn256dbl(P);
+        ecn256dbl(P);
+        ecn256dbl(P);
+        ecn256dbl(P);
+        ecn256add(&Q,P);
     }
 }
 
 // double point multiplication R=eP+fQ
 // not constant time
-void ecnmul2(const char *e,point *P,const char *f,point *Q,point *R)
+void ecn256mul2(const char *e,point *P,const char *f,point *Q,point *R)
 {
     int i;
     point T,W[5];
     signed char w[8*Nbytes+8];
-    ecninf(&W[0]);     // O
-    ecncpy(P,&W[1]);   // P
-    ecncpy(Q,&W[3]);   // Q
-    ecncpy(Q,&W[2]); ecnsub(P,&W[2]);  // Q-P
-    ecncpy(Q,&W[4]); ecnadd(P,&W[4]);  // Q+P
+    ecn256inf(&W[0]);     // O
+    ecn256cpy(P,&W[1]);   // P
+    ecn256cpy(Q,&W[3]);   // Q
+    ecn256cpy(Q,&W[2]); ecn256sub(P,&W[2]);  // Q-P
+    ecn256cpy(Q,&W[4]); ecn256add(P,&W[4]);  // Q+P
 
     dnaf(e,f,(char *)w);
 
     i=8*Nbytes+7;
     while (w[i]==0) i--; // ignore leading zeros
-    ecninf(R);
+    ecn256inf(R);
     while (i>=1)
     {
-        ecndbl(R);
+        ecn256dbl(R);
         if (w[i]!=0) {
             select(w[i],W,&T);
-            ecnadd(&T,R);
+            ecn256add(&T,R);
         }
         i--;
     }
