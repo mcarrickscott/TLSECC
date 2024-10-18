@@ -918,11 +918,11 @@ void outputxy(point *P)
 // Important that x and y < q
 // precalculate c=nres(2^376 mod q) - see ec384_order.py
 #if Wordlength==64
-static const spint constant_c[7]={0xab3b9af6e24bde,0x970d17e866e2cd,0xf8ce7f1c6d4b85,0x174aab1ca68def,0x28266895d40d49,0x39bf213fb05b7a,0x8d0c84ee012b};
+static const spint constant_c[7]={0x319b2419b409a9,0x81e5df1aa4192d,0x3afcb82947ff3d,0x4aab1cc5bc3e48,0x266895d40d4917,0xbf213fb05b7a28,0xc84ee012b39};
 #endif
 
 #if Wordlength==32
-static const spint constant_c[14]={0x6e24bde,0xab3b9af,0x866e2cd,0x970d17e,0xc6d4b85,0xf8ce7f1,0xca68def,0x174aab1,0x5d40d49,0x2826689,0xfb05b7a,0x39bf213,0x4ee012b,0x8d0c8};
+static const spint constant_c[14]={0x9b409a9,0x319b241,0xaa4192d,0x81e5df1,0x947ff3d,0x3afcb82,0x5bc3e48,0x4aab1cc,0x40d4917,0x266895d,0x5b7a28,0xbf213fb,0xe012b39,0xc84e};
 #endif
 
 static void reduce(char *h,spint *r)
