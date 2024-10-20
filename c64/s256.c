@@ -691,7 +691,7 @@ static int char2int(char input)
 static void fromHex(int ilen, const char *src, char *dst)
 {
     int i,lz,len=0;
-    char pad[128];
+    char pad[300];
     while (src[len]!=0) len++;
     lz=2*ilen-len;
     if (lz<0) lz=0;

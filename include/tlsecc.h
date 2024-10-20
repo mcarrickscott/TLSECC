@@ -105,4 +105,44 @@ extern void NIST384_SIGN(char *SK,char *ran,int mlen,char *m,char *sig);
 extern int NIST384_VERIFY(char *PK,int mlen,char *m,char *sig);
 
 
+
+/**** NIST521 *****/
+
+/** @brief Generate an NIST521 key pair
+ *
+    @param compress set true for point compression
+    @param SK an input random 66-byte secret key
+    @param PK an output 67 or 133 byte public key
+ */
+extern void NIST521_KEY_PAIR(int compress,char *SK,char *PK);
+
+/** @brief Generate an NIST521 shared secret
+ *
+    @param SK an input random 66-byte secret key
+    @param PK an input random public key, 67-byte compressed or 133 bytes uncompressed
+    @param SS an output shared 66-byte secret
+    @return true for success
+ */
+extern int NIST521_SHARED_SECRET(char *SK,char *PK,char *SS);
+
+
+/** @brief Generate an NIST521 ECDSA signature
+ *
+    @param SK an input random 66-byte secret key
+    @param ran an input random 74 bytes
+    @param mlen the length of the input
+    @param m an input message
+    @param sig an output 132 byte signature
+ */
+extern void NIST521_SIGN(char *SK,char *ran,int mlen,char *m,char *sig);
+
+/** @brief Generate an NIST521 shared secret
+ *
+    @param PK an input random public key, 67-byte compressed or 133 bytes uncompressed
+    @param mlen the length of the input
+    @param m an input message
+    @param sig an input 132 byte signature
+    @return true if signature is good, else false
+ */
+extern int NIST521_VERIFY(char *PK,int mlen,char *m,char *sig);
 #endif

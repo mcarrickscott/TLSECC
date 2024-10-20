@@ -994,6 +994,11 @@ int ecn384isinf(point *P)
 void ecn384affine(point *P)
 {
     spint I[Nlimbs];
+    if (modis0(P->z)) {
+        modzer(P->x);
+        modone(P->y);
+        return;
+    }
     modinv(P->z,NULL,I);
     modone(P->z);
     modmul(P->x,I,P->x);
