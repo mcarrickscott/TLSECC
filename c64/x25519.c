@@ -575,9 +575,9 @@ static void rfc7748(const char *bk, const char *bu,char *bv) {
     }
 
     reverse(cu);  // convert from little to big endian
-#ifdef X25519
+
     cu[0]&=0x7f;  // implementations of X25519 (but not X448) MUST mask the most significant bit in the final byte
-#endif     
+   
 // clamp input
     clamp(ck);
 
@@ -670,7 +670,7 @@ int X25519_SHARED_SECRET(char *SK,char *PK,char *SS)
     rfc7748(SK,PK,SS);
 
 // all zeros is suspect...
-    for (int i=0;i<32;i++) ors|=SS[i];
+    for (int i=0;i<Nbytes;i++) ors|=SS[i];
     if (ors==0) return 0;
     return 1;
 }

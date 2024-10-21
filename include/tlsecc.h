@@ -4,6 +4,7 @@
 #ifndef TLSECC_H
 #define TLSECC_H
 
+
 /**** X25519 ****/
 
 /** @brief Generate an X25519 key pair
@@ -21,6 +22,26 @@ extern void X25519_KEY_PAIR(char *SK,char *PK);
     @return true for success
  */
 extern int X25519_SHARED_SECRET(char *SK,char *PK,char *SS);
+
+
+/**** X448 ****/
+
+/** @brief Generate an X448 key pair
+ *
+    @param SK an input random 56-byte secret key
+    @param PK an output random 56-byte public key
+ */
+extern void X448_KEY_PAIR(char *SK,char *PK);
+
+/** @brief Generate an X448 shared secret
+ *
+    @param SK an input random 56-byte secret key
+    @param PK an input random 56-byte public key
+    @param SS an output shared 56-byte secret
+    @return true for success
+ */
+extern int X448_SHARED_SECRET(char *SK,char *PK,char *SS);
+
 
 
 /**** NIST256 *****/
