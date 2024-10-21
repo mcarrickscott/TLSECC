@@ -916,20 +916,13 @@ void outputxy(point *P)
 // reduce 56 byte array h to integer r modulo group order q, in constant time
 // Consider h as 2^376.x + y, where x and y < q (x is top 9 bytes, y is bottom 47 bytes)
 // Important that x and y < q
-// precalculate c=nres(2^376 mod q) - see ec384_order.py
-#if Wordlength==64
-static const spint constant_c[7]={0x319b2419b409a9,0x81e5df1aa4192d,0x3afcb82947ff3d,0x4aab1cc5bc3e48,0x266895d40d4917,0xbf213fb05b7a28,0xc84ee012b39};
-#endif
-
-#if Wordlength==32
-static const spint constant_c[14]={0x9b409a9,0x319b241,0xaa4192d,0x81e5df1,0x947ff3d,0x3afcb82,0x5bc3e48,0x4aab1cc,0x40d4917,0x266895d,0x5b7a28,0xbf213fb,0xe012b39,0xc84e};
-#endif
-
 static void reduce(char *h,spint *r)
 {
     int i;
     char buff[BYTES];
-    gel x,y,z;
+    gel x,y,c;
+
+    mod2r(8*(BYTES-1),c); // 2^376
 
     for (i=0;i<BYTES-1;i++)
         buff[i]=h[i];  // little endian
@@ -944,8 +937,8 @@ static void reduce(char *h,spint *r)
     reverse(buff);
     modimp(buff,x);
 
-    modmul(x,constant_c,x);  // 2^376.x 
-    modadd(x,y,r);
+    modmul(x,c,x);
+    modadd(x,y,r);    // 2^376.x + y
 }
 
 //#define PREHASHED   // define for test vectors

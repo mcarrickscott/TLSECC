@@ -1103,20 +1103,13 @@ void outputxy(point *P)
 // reduce 74 byte array h to integer r modulo group order q, in constant time
 // Consider h as 2^520.x + y, where x and y < q (x is top 9 bytes, y is bottom 65 bytes)
 // Important that x and y < q
-// precalculate c=nres(2^520 mod q) - see ec521_order.py
-#if Wordlength==64
-static const spint constant_c[9]={0x84d067e70420e0,0x4a06b0a8f847d2d,0x6f6fdd43bc8b401,0x51a763d7fa37e32,0x3de67f9e887e9d2,0x455bcc6d61a8e56,0x25b1c07a2925a1a,0x6d68ebfa3110e0f,0x8f501c8d1cd2};
-#endif
-
-#if Wordlength==32
-static const spint constant_c[19]={0xe0841c0,0x9a0cfc,0x847d2d1,0x6b0a8f,0x45a00ca,0x7eea1de,0xdf8cb7b,0xd8f5fe8,0xd3a5469,0xff3d10f,0xe567bcc,0xc6d61a8,0xd455bc,0x3d1492d,0x3d2d8e0,0xe8c4438,0x5b5a3af,0x391a39a,0x11ea0};
-#endif
-
 static void reduce(char *h,spint *r)
 {
     int i;
     char buff[BYTES];
-    gel x,y,z;
+    gel x,y,c;
+
+    mod2r(8*(BYTES-1),c); // 2^520
 
     for (i=0;i<BYTES-1;i++)
         buff[i]=h[i];  // little endian
@@ -1131,8 +1124,8 @@ static void reduce(char *h,spint *r)
     reverse(buff);
     modimp(buff,x);
 
-    modmul(x,constant_c,x);  // 2^520.x 
-    modadd(x,y,r);
+    modmul(x,c,x);
+    modadd(x,y,r);   // 2^520.x + y
 }
 
 //#define PREHASHED   // define for test vectors
