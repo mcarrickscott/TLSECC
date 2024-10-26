@@ -767,6 +767,18 @@ static int modshr(unsigned int n, spint *a) {
   return r;
 }
 
+// set a= 2^r
+static void mod2r(unsigned int r, spint *a) {
+  unsigned int n = r / 56u;
+  unsigned int m = r % 56u;
+  modzer(a);
+  if (r >= 48 * 8)
+    return;
+  a[n] = 1;
+  a[n] <<= m;
+  nres(a, a);
+}
+
 // export to byte array
 static void modexp(const spint *a, char *b) {
   int i;
