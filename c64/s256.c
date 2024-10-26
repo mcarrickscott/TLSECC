@@ -752,18 +752,17 @@ static void reduce(char *h,spint *r)
 
 // Input private key - 32 random bytes
 // Output public key - 65 bytes (0x04<x>|<y>), or 33 if compressed (0x02<x>.. or 0x03<x>)
-void NIST256_KEY_GEN(int compress,char *prv,char *pub)
+
+void NIST256_KEY_PAIR(int compress,char *SK,char *PK)
 {
     point P;
     ecn256gen(&P);
-
-    ecn256mul(prv,&P); 
-
+    ecn256mul(SK,&P);
     if (compress) {
-        pub[0]=0x02+ecn256get(&P,&pub[1],NULL); // 0x02 or 0x03
+        PK[0]=0x02+ecn256get(&P,&PK[1],NULL); // 0x02 or 0x03
     } else {
-        pub[0]=0x04; // no compression
-        ecn256get(&P,&pub[1],&pub[BYTES+1]);  // get x and y
+        PK[0]=0x04; // no compression
+        ecn256get(&P,&PK[1],&PK[BYTES+1]);  // get x and y
     }
 }
 
@@ -856,19 +855,6 @@ int NIST256_VERIFY(char *pub,int mlen,char *m,char *sig)
     }
     
     return res;
-}
-
-void NIST256_KEY_PAIR(int compress,char *SK,char *PK)
-{
-    point P;
-    ecn256gen(&P);
-    ecn256mul(SK,&P);
-    if (compress) {
-        PK[0]=0x02+ecn256get(&P,&PK[1],NULL); // 0x02 or 0x03
-    } else {
-        PK[0]=0x04; // no compression
-        ecn256get(&P,&PK[1],&PK[BYTES+1]);  // get x and y
-    }
 }
 
 int NIST256_SHARED_SECRET(char *SK,char *PK,char *SS)

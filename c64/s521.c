@@ -1148,18 +1148,17 @@ static void reduce(char *h,spint *r)
 
 // Input private key - 66 random bytes
 // Output public key - 133 bytes (0x04<x>|<y>), or 67 if compressed (0x02<x>.. or 0x03<x>)
-void NIST521_KEY_GEN(int compress,char *prv,char *pub)
+void NIST521_KEY_PAIR(int compress,char *SK,char *PK)
 {
     point P;
     ecn521gen(&P);
-
-    ecn521mul(prv,&P); 
+    ecn521mul(SK,&P);
 
     if (compress) {
-        pub[0]=0x02+ecn521get(&P,&pub[1],NULL); // 0x02 or 0x03
+        PK[0]=0x02+ecn521get(&P,&PK[1],NULL); // 0x02 or 0x03
     } else {
-        pub[0]=0x04; // no compression
-        ecn521get(&P,&pub[1],&pub[BYTES+1]);  // get x and y
+        PK[0]=0x04; // no compression
+        ecn521get(&P,&PK[1],&PK[BYTES+1]);  // get x and y
     }
 }
 
@@ -1252,20 +1251,6 @@ int NIST521_VERIFY(char *pub,int mlen,char *m,char *sig)
     }
     
     return res;
-}
-
-void NIST521_KEY_PAIR(int compress,char *SK,char *PK)
-{
-    point P;
-    ecn521gen(&P);
-    ecn521mul(SK,&P);
-
-    if (compress) {
-        PK[0]=0x02+ecn521get(&P,&PK[1],NULL); // 0x02 or 0x03
-    } else {
-        PK[0]=0x04; // no compression
-        ecn521get(&P,&PK[1],&PK[BYTES+1]);  // get x and y
-    }
 }
 
 int NIST521_SHARED_SECRET(char *SK,char *PK,char *SS)

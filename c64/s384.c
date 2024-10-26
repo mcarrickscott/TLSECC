@@ -961,18 +961,18 @@ static void reduce(char *h,spint *r)
 
 // Input private key - 48 random bytes
 // Output public key - 97 bytes (0x04<x>|<y>), or 49 if compressed (0x02<x>.. or 0x03<x>)
-void NIST384_KEY_GEN(int compress,char *prv,char *pub)
+
+void NIST384_KEY_PAIR(int compress,char *SK,char *PK)
 {
     point P;
     ecn384gen(&P);
-
-    ecn384mul(prv,&P); 
+    ecn384mul(SK,&P);
 
     if (compress) {
-        pub[0]=0x02+ecn384get(&P,&pub[1],NULL); // 0x02 or 0x03
+        PK[0]=0x02+ecn384get(&P,&PK[1],NULL); // 0x02 or 0x03
     } else {
-        pub[0]=0x04; // no compression
-        ecn384get(&P,&pub[1],&pub[BYTES+1]);  // get x and y
+        PK[0]=0x04; // no compression
+        ecn384get(&P,&PK[1],&PK[BYTES+1]);  // get x and y
     }
 }
 
@@ -1065,20 +1065,6 @@ int NIST384_VERIFY(char *pub,int mlen,char *m,char *sig)
     }
     
     return res;
-}
-
-void NIST384_KEY_PAIR(int compress,char *SK,char *PK)
-{
-    point P;
-    ecn384gen(&P);
-    ecn384mul(SK,&P);
-
-    if (compress) {
-        PK[0]=0x02+ecn384get(&P,&PK[1],NULL); // 0x02 or 0x03
-    } else {
-        PK[0]=0x04; // no compression
-        ecn384get(&P,&PK[1],&PK[BYTES+1]);  // get x and y
-    }
 }
 
 int NIST384_SHARED_SECRET(char *SK,char *PK,char *SS)
