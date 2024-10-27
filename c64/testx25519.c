@@ -1,4 +1,5 @@
 // a test vector for x25519 from RFC7748
+// gcc -O2 testx25519.c x25519.c -o testx25519
 
 #include <stdio.h>
 #include "tlsecc.h"

@@ -1,5 +1,5 @@
 // test for FIPS 186-5 ECDSA Signature Generation
-// gcc -O2 tests256.c s256.c nist256.c hash.c -o tests256
+// gcc -O2 tests384.c s384.c nist384.c hash.c -o tests384
 
 #include <stdio.h>
 #include "tlsecc.h"
@@ -58,13 +58,13 @@ static void toHex(int len, const char *src, char *dst)
     dst[2*len]='\0';
 }
 
-#define BYTES 32
+#define BYTES 48
 
 int main()
 {
-    const char *sk= (const char *)"519b423d715f8b581f4fa8ee59f4771a5b44c8130b4e3eacca54a56dda72b464"; // 32 bytes
-    const char *ran=(const char *)"94a1bbb14b906a61a280f245f9e93c7f3b4a6247824f5d33b9670787642a68deb9670787642a68de"; // 40 bytes
-    const char *msg=(const char *)"44acf6b7e36c1342c2c5897204fe09504e1e2efb1a900377dbc4e7a6a133ec56"; // 32 byte message
+    const char *sk= (const char *)"519b423d715f8b581f4fa8ee59f4771a5b44c8130b4e3eacca54a56dda72b464abababababababababababababababab"; // 48 bytes
+    const char *ran=(const char *)"94a1bbb14b906a61a280f245f9e93c7f3b4a6247824f5d33b9670787642a68deb9670787642a68deabababababababababababababababab";  // 48+8 bytes
+    const char *msg=(const char *)"44acf6b7e36c1342c2c5897204fe09504e1e2efb1a900377dbc4e7a6a133ec56"; // 32 bytes
     char prv[BYTES],pub[2*BYTES+1];
     char buff[256],m[BYTES],k[BYTES+8],sig[2*BYTES];
     int res,compress=1;
@@ -73,18 +73,18 @@ int main()
     fromHex(BYTES,sk,prv);
     fromHex(BYTES+8,ran,k);
     fromHex(32,msg,m);
-    NIST256_KEY_PAIR(compress,prv,pub);
+    NIST384_KEY_PAIR(compress,prv,pub);
     if (compress)
         toHex(BYTES+1,pub,buff);
     else
         toHex(2*BYTES+1,pub,buff);
 
     printf("public key= "); puts(buff);
-    NIST256_SIGN(prv,k,32,m,sig);
+    NIST384_SIGN(prv,k,32,m,sig);
     toHex(2*BYTES,sig,buff);
     printf("signature=  "); puts(buff);
 
-    res=NIST256_VERIFY(pub,32,m,sig);
+    res=NIST384_VERIFY(pub,32,m,sig);
     if (res)
         printf("Signature is valid\n");
     else

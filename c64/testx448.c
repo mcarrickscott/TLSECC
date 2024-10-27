@@ -1,4 +1,5 @@
 // a test vector for x448 from RFC7748
+// gcc -O2 testx448.c x448.c -o testx448
 
 #include <stdio.h>
 #include "tlsecc.h"
