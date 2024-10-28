@@ -1089,6 +1089,7 @@ int ED448_VERIFY(char *pub,int mlen,char *m,char *sig)
     reverse(buff);
     sign=sig[BYTES]>>7;
     ecn448set(sign,NULL,buff,&R);
+    if (ecn448isinf(&R)) return 0;
 
 // reconstruct point Q 
     for (i=0;i<BYTES;i++)
@@ -1096,6 +1097,7 @@ int ED448_VERIFY(char *pub,int mlen,char *m,char *sig)
     reverse(buff);
     sign=(pub[BYTES]>>7)&1;
     ecn448set(sign,NULL,buff,&Q);
+    if (ecn448isinf(&Q)) return 0;
 
     for (i=0;i<BYTES;i++)
         buff[i]=sig[i+BYTES+1];
