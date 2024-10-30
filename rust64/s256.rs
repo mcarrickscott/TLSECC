@@ -14,7 +14,6 @@ use crate::nist256::ECP;
 
 use crate::hash;
 use crate::hash::*;
-use crate::hash::SHA256;
 
 /*** Insert code automatically generated in group.rs here ***/
 /* Note that much of this code is not needed and can be deleted */

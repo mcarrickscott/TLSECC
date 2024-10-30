@@ -3,10 +3,10 @@ extern crate tlsecc;
 
 use std::str;
 
-use tlsecc::Ed448::BYTES;
-use tlsecc::Ed448::ED448_KEY_PAIR;
-use tlsecc::Ed448::ED448_SIGN;
-use tlsecc::Ed448::ED448_VERIFY;
+use tlsecc::s448::BYTES;
+use tlsecc::s448::ED448_KEY_PAIR;
+use tlsecc::s448::ED448_SIGN;
+use tlsecc::s448::ED448_VERIFY;
 
 
 // Some utility functions for I/O and debugging

@@ -1,6 +1,6 @@
 pub mod hash;
-pub mod edw448;
-pub mod Ed448;
+pub mod ed448;
+pub mod s448;
 pub mod nist256;
-pub mod EC256;
+pub mod s256;
 
