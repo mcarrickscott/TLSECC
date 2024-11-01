@@ -9,3 +9,5 @@ pub mod nist384;
 pub mod s384;
 pub mod nist521;
 pub mod s521;
+pub mod x25519;
+pub mod x448;
