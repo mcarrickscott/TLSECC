@@ -1,6 +1,8 @@
 # TLSECC
 
-Portable, performant, constant time C and Rust libraries for supporting Elliptic curve functionality for TLS1.3 on 32 or 64 bit architectures
+Portable, performant, constant time C and Rust libraries for supporting Elliptic curve functionality for TLS1.3 on 32 or 64 bit architectures.
+
+Code in large part automatically generated from python scripts - see https://github.com/mcarrickscott/modarith
 
 # Build
 
