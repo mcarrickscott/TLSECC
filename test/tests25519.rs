@@ -66,7 +66,7 @@ fn main() {
     print!("Public key= "); printhex(BYTES,&public);
 
     m[0]=0x72; // message to be signed
-    ED25519_SIGN(&prv,&mut public,&m[0..1],&mut sig);
+    ED25519_SIGN(&prv,Some(&public),&m[0..1],&mut sig);
     print!("signature=  "); printhex(2*BYTES,&sig); 
 
     let res=ED25519_VERIFY(&public,&m[0..1],&sig);

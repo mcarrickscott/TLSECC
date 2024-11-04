@@ -790,8 +790,17 @@ void ED25519_SIGN(char *prv,char *pub,int mlen,char *m,char *sig)
     gel r,s,d;     // some group elements..
     hash512 sh512;
     char h[2*BYTES];   
+    char ipub[BYTES];
     ecn25519gen(&G);  // get curve generator point
  
+    if (pub!=NULL)
+    {
+        for (i=0;i<BYTES;i++)
+            ipub[i]=pub[i];
+    } else {
+        ED25519_KEY_PAIR(prv,ipub);
+    }
+
     HASH512_init(&sh512);
     H(BYTES,prv,h);
     
@@ -818,7 +827,7 @@ void ED25519_SIGN(char *prv,char *pub,int mlen,char *m,char *sig)
     for (i=0;i<BYTES;i++ )
         HASH512_process(&sh512,sig[i]);  // R
     for (i=0;i<BYTES;i++)
-        HASH512_process(&sh512,pub[i]);  // Q
+        HASH512_process(&sh512,ipub[i]);  // Q
     for (i=0;i<mlen;i++)
         HASH512_process(&sh512,m[i]);   // M 
     HASH512_hash(&sh512,h);

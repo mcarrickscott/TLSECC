@@ -730,10 +730,10 @@ static int modcmp(const spint *a, const spint *b) {
 
 #define COF 1
 #define CONSTANT_A -3
-const spint constant_b[7]={0x8870d0412dcccd,0xd9474c32ec0811,0x1920022fc429ad,0x938ae277f2209b,0x2094e3374bee94,0xf9b62b21f41f02,0x8114b604fbf};
-const spint constant_b3[7]={0x995270c3896667,0x8bd5e498c41834,0x4b60068f4c7d09,0xbaa0a767d661d1,0x61bea9a5e3cbbd,0xed228165dc5d06,0x1833e220ef3f};
-const spint constant_x[7]={0x7565fcc0b5284d,0xe2edd6ce383dd0,0x541b4d6e6de378,0xa30eff879c3afc,0xde2b6454868459,0x13812ff723614e,0x3aadc2299e15};
-const spint constant_y[7]={0x3dad2003a4fe2b,0xbfa6b4a9ac2304,0x2e83b050ccbfa8,0xf4ffd98bade756,0xa840c6c3521968,0xe9dd8002263969,0x78abc25a15c5};
+static const spint constant_b[7]={0x8870d0412dcccd,0xd9474c32ec0811,0x1920022fc429ad,0x938ae277f2209b,0x2094e3374bee94,0xf9b62b21f41f02,0x8114b604fbf};
+static const spint constant_b3[7]={0x995270c3896667,0x8bd5e498c41834,0x4b60068f4c7d09,0xbaa0a767d661d1,0x61bea9a5e3cbbd,0xed228165dc5d06,0x1833e220ef3f};
+static const spint constant_x[7]={0x7565fcc0b5284d,0xe2edd6ce383dd0,0x541b4d6e6de378,0xa30eff879c3afc,0xde2b6454868459,0x13812ff723614e,0x3aadc2299e15};
+static const spint constant_y[7]={0x3dad2003a4fe2b,0xbfa6b4a9ac2304,0x2e83b050ccbfa8,0xf4ffd98bade756,0xa840c6c3521968,0xe9dd8002263969,0x78abc25a15c5};
 
 
 

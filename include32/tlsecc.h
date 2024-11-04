@@ -186,7 +186,7 @@ extern void ED448_KEY_PAIR(char *SK,char *PK);
     @param m an input message
     @param sig an output 114 byte signature
  */
-extern void ED448_SIGN(char *SK,char *pub,int mlen,char *m,char *sig);
+extern void ED448_SIGN(char *SK,char *PK,int mlen,char *m,char *sig);
 
 /** @brief Verify an Ed448 signature
  *
@@ -218,7 +218,7 @@ extern void ED25519_KEY_PAIR(char *SK,char *PK);
     @param m an input message
     @param sig an output 64 byte signature
  */
-extern void ED25519_SIGN(char *SK,char *pub,int mlen,char *m,char *sig);
+extern void ED25519_SIGN(char *SK,char *PK,int mlen,char *m,char *sig);
 
 /** @brief Verify an Ed25519 signature
  *

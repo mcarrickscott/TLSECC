@@ -178,7 +178,7 @@ extern int NIST521_VERIFY(char *PK,int mlen,char *m,char *sig);
  */
 extern void ED448_KEY_PAIR(char *SK,char *PK);
 
-/** @brief Generate an Ed448 ECDSA signature
+/** @brief Generate an Ed448 EdDSA signature
  *
     @param SK an input 57-byte secret key
     @param PK an input 57 byte public key
@@ -186,7 +186,7 @@ extern void ED448_KEY_PAIR(char *SK,char *PK);
     @param m an input message
     @param sig an output 114 byte signature
  */
-extern void ED448_SIGN(char *SK,char *pub,int mlen,char *m,char *sig);
+extern void ED448_SIGN(char *SK,char *PK,int mlen,char *m,char *sig);
 
 /** @brief Verify an Ed448 signature
  *
@@ -210,7 +210,7 @@ extern int ED448_VERIFY(char *PK,int mlen,char *m,char *sig);
  */
 extern void ED25519_KEY_PAIR(char *SK,char *PK);
 
-/** @brief Generate an Ed25519 ECDSA signature
+/** @brief Generate an Ed25519 EdDSA signature
  *
     @param SK an input 32-byte secret key
     @param PK an input 32 byte public key
@@ -218,7 +218,7 @@ extern void ED25519_KEY_PAIR(char *SK,char *PK);
     @param m an input message
     @param sig an output 64 byte signature
  */
-extern void ED25519_SIGN(char *SK,char *pub,int mlen,char *m,char *sig);
+extern void ED25519_SIGN(char *SK,char *PK,int mlen,char *m,char *sig);
 
 /** @brief Verify an Ed25519 signature
  *

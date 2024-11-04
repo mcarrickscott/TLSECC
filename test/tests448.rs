@@ -26,7 +26,7 @@ fn char2int(inp: u8) -> u8 {
 
 // string s better have even number of characters!
 fn from_hex(ilen:usize,s: &str,x: &mut[u8]) {
-    let mut pad:[u8;128]=[0;128];
+    let mut pad:[u8;256]=[0;256];
     let c=s.as_bytes();
     let len=c.len();
     let mut lz=2*ilen-len;
@@ -66,7 +66,7 @@ fn main() {
     print!("Public key= "); printhex(BYTES+1,&public);
 
     m[0]=0x03; // message to be signed
-    ED448_SIGN(&prv,&mut public,&m[0..1],&mut sig);
+    ED448_SIGN(&prv,Some(&public),&m[0..1],&mut sig);
     print!("signature=  "); printhex(2*BYTES+2,&sig); 
 
     let res=ED448_VERIFY(&public,&m[0..1],&sig);

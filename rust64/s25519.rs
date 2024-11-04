@@ -767,8 +767,9 @@ pub fn ED25519_KEY_PAIR(prv: &[u8],public: &mut [u8]) {
 }
 
 // input private key, public key, message to be signed. Output signature
-pub fn ED25519_SIGN(prv:&[u8],public:&[u8],m:&[u8],sig:&mut [u8]) {
+pub fn ED25519_SIGN(prv:&[u8],public: Option<&[u8]>,m:&[u8],sig:&mut [u8]) {
     let mut sh:[u8;BYTES]=[0;BYTES];
+    let mut ipub:[u8;BYTES]=[0;BYTES];
     let mut s:GEL=[0;LIMBS];
     let mut r:GEL=[0;LIMBS];
     let mut d:GEL=[0;LIMBS];
@@ -777,6 +778,14 @@ pub fn ED25519_SIGN(prv:&[u8],public:&[u8],m:&[u8],sig:&mut [u8]) {
 
     let mut G=ECP::new();
     ecngen(&mut G);
+
+    if let Some(pb) = public {
+        for i in 0..BYTES {
+            ipub[i]=pb[i];
+        }
+    } else {
+        ED25519_KEY_PAIR(prv,&mut ipub);
+    }
 
     let mut h=H(BYTES,&prv);
 
@@ -816,7 +825,7 @@ pub fn ED25519_SIGN(prv:&[u8],public:&[u8],m:&[u8],sig:&mut [u8]) {
         sha512.process(sig[i]);  // R
     }
     for i in 0..BYTES {
-        sha512.process(public[i]);  // Q
+        sha512.process(ipub[i]);  // Q
     }
     for i in 0..m.len() {
         sha512.process(m[i]);
