@@ -2130,8 +2130,8 @@ void NIST521_SIGN(char *prv,char *ran,int mlen,char *m,char *sig)
     HASH512_init(&sh512);
     for (i=0;i<mlen;i++)
         HASH512_process(&sh512,m[i]);
-    HASH512_hash(&sh512,h); 
-    h[64]=h[65]=0;  /* !!! */
+    HASH512_hash(&sh512,&h[2]); 
+    h[0]=h[1]=0;  /* !!! */
     modimp(h,e);
 #endif
 
@@ -2170,8 +2170,8 @@ int NIST521_VERIFY(char *pub,int mlen,char *m,char *sig)
     HASH512_init(&sh512);
     for (i=0;i<mlen;i++)
         HASH512_process(&sh512,m[i]);
-    HASH512_hash(&sh512,h); 
-    h[64]=h[65]=0;
+    HASH512_hash(&sh512,&h[2]); 
+    h[0]=h[1]=0;
 
     modimp(h,e);
 #endif

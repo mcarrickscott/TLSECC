@@ -2138,7 +2138,7 @@ pub fn NIST521_SIGN(prv: &[u8],ran: &[u8],m:&[u8],sig: &mut [u8]) {
         let h=sh512.hash();
         let mut hh:[u8;BYTES]=[0;BYTES];
         for i in 0..64 {
-            hh[i]=h[i];
+            hh[i+2]=h[i];
         }
         modimp(&hh,&mut e);
     }
@@ -2192,7 +2192,7 @@ pub fn NIST521_VERIFY(public: &[u8],m:&[u8],sig:&[u8]) -> bool {
         let h=sh512.hash();
         let mut hh:[u8;BYTES]=[0;BYTES];
         for i in 0..64 {
-            hh[i]=h[i];
+            hh[i+2]=h[i];
         }
         modimp(&hh,&mut e);
     }
