@@ -1443,14 +1443,14 @@ fn rfc7748(bk: &[u8],bu: &[u8],bv: &mut [u8]) {
     bv.reverse(); // convert to little endian
 }
 
-pub fn X448_KEY_PAIR(sk: &[u8],pk: &mut [u8])
+pub fn KEY_PAIR(sk: &[u8],pk: &mut [u8])
 {
     let mut bu:[u8;NBYTES]=[0;NBYTES];
     bu[0]=GENERATOR;
     rfc7748(sk,&bu,pk);
 }
 
-pub fn X448_SHARED_SECRET(sk: &[u8],pk: &[u8],ss: &mut [u8]) -> bool
+pub fn SHARED_SECRET(sk: &[u8],pk: &[u8],ss: &mut [u8]) -> bool
 {
     let mut ors=0 as u8;
     rfc7748(sk,pk,ss);

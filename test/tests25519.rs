@@ -62,14 +62,14 @@ fn main() {
 
     from_hex(BYTES,&SK,&mut prv); 
     println!("private key= "); printhex(BYTES,&prv);
-    ED25519_KEY_PAIR(&prv,&mut public);
+    KEY_PAIR(&prv,&mut public);
     print!("Public key= "); printhex(BYTES,&public);
 
     m[0]=0x72; // message to be signed
-    ED25519_SIGN(&prv,Some(&public),&m[0..1],&mut sig);
+    SIGN(&prv,Some(&public),&m[0..1],&mut sig);
     print!("signature=  "); printhex(2*BYTES,&sig); 
 
-    let res=ED25519_VERIFY(&public,&m[0..1],&sig);
+    let res=VERIFY(&public,&m[0..1],&sig);
     if res {
         println!("Signature is valid");
     } else {

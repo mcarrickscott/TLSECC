@@ -958,7 +958,7 @@ fn H(ilen:usize,s:&[u8]) -> [u8; 64] {
 
 // Input private key - 32 random bytes
 // Output public key - 32 bytes
-pub fn ED25519_KEY_PAIR(prv: &[u8],public: &mut [u8]) {
+pub fn KEY_PAIR(prv: &[u8],public: &mut [u8]) {
     let mut G=ECP::new();
     ecngen(&mut G);
     let mut s:[u8;BYTES]=[0;BYTES]; 
@@ -983,7 +983,7 @@ pub fn ED25519_KEY_PAIR(prv: &[u8],public: &mut [u8]) {
 }
 
 // input private key, public key, message to be signed. Output signature
-pub fn ED25519_SIGN(prv:&[u8],public: Option<&[u8]>,m:&[u8],sig:&mut [u8]) {
+pub fn SIGN(prv:&[u8],public: Option<&[u8]>,m:&[u8],sig:&mut [u8]) {
     let mut sh:[u8;BYTES]=[0;BYTES];
     let mut ipub:[u8;BYTES]=[0;BYTES];
     let mut s:GEL=[0;LIMBS];
@@ -1059,7 +1059,7 @@ pub fn ED25519_SIGN(prv:&[u8],public: Option<&[u8]>,m:&[u8],sig:&mut [u8]) {
     }
 }
 
-pub fn ED25519_VERIFY(public: &[u8],m:&[u8],sig:&[u8]) -> bool {
+pub fn VERIFY(public: &[u8],m:&[u8],sig:&[u8]) -> bool {
     let mut buff:[u8;BYTES]=[0;BYTES]; 
     let mut sh:[u8;BYTES]=[0;BYTES];
     let mut G=ECP::new();

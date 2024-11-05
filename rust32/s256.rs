@@ -1075,7 +1075,7 @@ fn reduce(h:&[u8],r:&mut [SPINT]) {
 
 // Input private key - 32 random bytes
 // Output public key - 65 bytes (0x04<x>|<y>), or 33 if compressed (0x02<x>.. or 0x03<x>)
-pub fn NIST256_KEY_PAIR(compress: bool,prv: &[u8],public: &mut [u8]) {
+pub fn KEY_PAIR(compress: bool,prv: &[u8],public: &mut [u8]) {
     let mut P=ECP::new();
     let mut x:[u8;BYTES]=[0;BYTES];
     let mut y:[u8;BYTES]=[0;BYTES];
@@ -1100,7 +1100,7 @@ pub fn NIST256_KEY_PAIR(compress: bool,prv: &[u8],public: &mut [u8]) {
     public[0]=fb;
 }
 
-pub fn NIST256_SIGN(prv: &[u8],ran: &[u8],m:&[u8],sig: &mut [u8]) {
+pub fn SIGN(prv: &[u8],ran: &[u8],m:&[u8],sig: &mut [u8]) {
     let mut rb:[u8;BYTES]=[0;BYTES];
     let mut sb:[u8;BYTES]=[0;BYTES];
     let mut R=ECP::new();
@@ -1146,7 +1146,7 @@ pub fn NIST256_SIGN(prv: &[u8],ran: &[u8],m:&[u8],sig: &mut [u8]) {
 }
 
 // input public key, message and signature
-pub fn NIST256_VERIFY(public: &[u8],m:&[u8],sig:&[u8]) -> bool {
+pub fn VERIFY(public: &[u8],m:&[u8],sig:&[u8]) -> bool {
     let mut G=ECP::new();
     let mut Q=ECP::new();
 

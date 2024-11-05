@@ -68,17 +68,17 @@ fn main() {
     print!("private key= "); printhex(BYTES,&prv);
     from_hex(BYTES+8,&RAN,&mut k);
     from_hex(BYTES,&MSG,&mut m);
-    NIST256_KEY_PAIR(compress,&prv,&mut public);  
+    KEY_PAIR(compress,&prv,&mut public);  
     print!("Public key= ");
     if compress {
         printhex(BYTES+1,&public);
     } else {
         printhex(2*BYTES+1,&public);
     }
-    NIST256_SIGN(&prv,&k,&m[0..32],&mut sig);
+    SIGN(&prv,&k,&m[0..32],&mut sig);
     print!("signature= "); printhex(2*BYTES,&sig);
 
-    let res=NIST256_VERIFY(&public,&m[0..32],&sig);
+    let res=VERIFY(&public,&m[0..32],&sig);
     if res {
         println!("Signature is valid");
     } else {

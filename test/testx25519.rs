@@ -57,7 +57,7 @@ fn main() {
 // convert to byte array
     from_hex(NBYTES,&SK,&mut bk);
 
-    X25519_KEY_PAIR(&bk,&mut bv);
+    KEY_PAIR(&bk,&mut bv);
 
     println!("{}",&SK);
     printhex(NBYTES,&bv);
