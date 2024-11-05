@@ -4,9 +4,9 @@ extern crate tlsecc;
 use std::str;
 
 use tlsecc::s384::BYTES;
-use tlsecc::s384::NIST384_KEY_PAIR;
-use tlsecc::s384::NIST384_SIGN;
-use tlsecc::s384::NIST384_VERIFY;
+use tlsecc::s384::KEY_PAIR;
+use tlsecc::s384::SIGN;
+use tlsecc::s384::VERIFY;
 
 
 // Some utility functions for I/O and debugging

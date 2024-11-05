@@ -4,9 +4,9 @@ extern crate tlsecc;
 use std::str;
 
 use tlsecc::s25519::BYTES;
-use tlsecc::s25519::ED25519_KEY_PAIR;
-use tlsecc::s25519::ED25519_SIGN;
-use tlsecc::s25519::ED25519_VERIFY;
+use tlsecc::s25519::KEY_PAIR;
+use tlsecc::s25519::SIGN;
+use tlsecc::s25519::VERIFY;
 
 
 // Some utility functions for I/O and debugging

@@ -4,9 +4,9 @@ extern crate tlsecc;
 use std::str;
 
 use tlsecc::s521::BYTES;
-use tlsecc::s521::NIST521_KEY_PAIR;
-use tlsecc::s521::NIST521_SIGN;
-use tlsecc::s521::NIST521_VERIFY;
+use tlsecc::s521::KEY_PAIR;
+use tlsecc::s521::SIGN;
+use tlsecc::s521::VERIFY;
 
 
 // Some utility functions for I/O and debugging

@@ -4,8 +4,8 @@ extern crate tlsecc;
 use std::str;
 
 use tlsecc::x25519::NBYTES;
-use tlsecc::x25519::X25519_KEY_PAIR;
-use tlsecc::x25519::X25519_SHARED_SECRET;
+use tlsecc::x25519::KEY_PAIR;
+use tlsecc::x25519::SHARED_SECRET;
 
 // Some utility functions for I/O and debugging
 

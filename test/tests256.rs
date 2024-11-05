@@ -4,9 +4,9 @@ extern crate tlsecc;
 use std::str;
 
 use tlsecc::s256::BYTES;
-use tlsecc::s256::NIST256_KEY_PAIR;
-use tlsecc::s256::NIST256_SIGN;
-use tlsecc::s256::NIST256_VERIFY;
+use tlsecc::s256::KEY_PAIR;
+use tlsecc::s256::SIGN;
+use tlsecc::s256::VERIFY;
 
 
 // Some utility functions for I/O and debugging
