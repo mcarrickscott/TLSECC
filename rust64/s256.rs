@@ -900,4 +900,27 @@ pub fn VERIFY(public: &[u8],m:&[u8],sig:&[u8]) -> bool {
     return res;
 }
 
+pub fn SHARED_SECRET(prv: &[u8],public: &[u8],ss: &mut[u8]) -> bool {
+    let mut P=ECP::new();
+    let mut xb:[u8;BYTES]=[0;BYTES];
 
+    for i in 0..BYTES {
+        xb[i]=public[1+i];
+    }
+    if public[0]==0x04 {
+        let mut yb:[u8;BYTES]=[0;BYTES];
+        for i in 0..BYTES {
+            yb[i]=public[1+i+BYTES];
+        }
+        ecnset(0,&xb,Some(&yb),&mut P);
+    } else {
+        ecnset((public[0]&1) as usize,&xb,None,&mut P);
+    }
+
+    ecnmul(prv,&mut P);
+    ecnget(&mut P,ss,None);
+    if ecnisinf(&P) {
+        return false;
+    }
+    return true;
+}
