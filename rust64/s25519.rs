@@ -784,7 +784,7 @@ pub fn SIGN(prv:&[u8],public: Option<&[u8]>,m:&[u8],sig:&mut [u8]) {
             ipub[i]=pb[i];
         }
     } else {
-        ED25519_KEY_PAIR(prv,&mut ipub);
+        KEY_PAIR(prv,&mut ipub);
     }
 
     let mut h=H(BYTES,&prv);
