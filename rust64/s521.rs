@@ -1196,6 +1196,7 @@ pub fn VERIFY(public: &[u8],m:&[u8],sig:&[u8]) -> bool {
     let mut e:GEL=[0;LIMBS];
     let mut r:GEL=[0;LIMBS];
     let mut s:GEL=[0;LIMBS];
+    let mut rds:GEL=[0;LIMBS];
     
     if PREHASHED {
         modimp(m,&mut e);
@@ -1229,8 +1230,8 @@ pub fn VERIFY(public: &[u8],m:&[u8],sig:&[u8]) -> bool {
     if modis0(&r) || modis0(&s) {
         return false;
     }
-    modinv(None,&mut s);
-    modmul(&s,&mut r); modexp(&r,&mut v);  // export to byte array
+    modinv(None,&mut s); modcpy(&r,&mut rds);
+    modmul(&s,&mut rds); modexp(&rds,&mut v);  // export to byte array
     modmul(&e,&mut s); modexp(&s,&mut u); 
 
     for i in 0..BYTES {
@@ -1250,14 +1251,11 @@ pub fn VERIFY(public: &[u8],m:&[u8],sig:&[u8]) -> bool {
     }
     ecnget(&mut R,&mut rb,None);
 
-    let mut res=true;
-    for i in 0.. BYTES {
-        if sig[i]!=rb[i] { 
-            res=false;
-        }
+    modimp(&rb,&mut e);
+    if modcmp(&r,&e) {
+        return true;
     }
-    
-    return res;
+    return false;
 }
 
 pub fn SHARED_SECRET(prv: &[u8],public: &[u8],ss: &mut[u8]) -> bool {

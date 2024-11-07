@@ -1533,9 +1533,9 @@ void NIST384_SIGN(char *prv,char *ran,int mlen,char *m,char *sig)
 int NIST384_VERIFY(char *pub,int mlen,char *m,char *sig) 
 {
     point G,Q;
-    int i,res;
+    int i;
     char rb[BYTES],u[BYTES],v[BYTES];
-    gel e,r,s;
+    gel e,r,s,rds;
 #ifdef PREHASHED
     modimp(m,e);
 #else
@@ -1557,7 +1557,7 @@ int NIST384_VERIFY(char *pub,int mlen,char *m,char *sig)
 
     if (modis0(r) || modis0(s)) return 0;
     modinv(s,NULL,s);
-    modmul(r,s,r); modexp(r,v);  // export to byte array
+    modmul(r,s,rds); modexp(rds,v);  // export to byte array
     modmul(s,e,s); modexp(s,u); 
 
     if (pub[0]==0x04) {
@@ -1571,12 +1571,9 @@ int NIST384_VERIFY(char *pub,int mlen,char *m,char *sig)
 
     ecn384get(&Q,rb,NULL);
 
-    res=1;
-    for (i=0;i<BYTES;i++) {
-        if (sig[i]!=rb[i]) res=0;
-    }
-    
-    return res;
+    modimp(rb,e);
+    if (modcmp(r,e)) return 1;
+    return 0;
 }
 
 int NIST384_SHARED_SECRET(char *SK,char *PK,char *SS)
