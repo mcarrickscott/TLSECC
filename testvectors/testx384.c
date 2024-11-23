@@ -3,14 +3,14 @@
 // Create a working directory. Copy into it this file, the python script parse.py, and all files from https://github.com/mcarrickscott/TLSECC/c64 and https://github.com/mcarrickscott/TLSECC/include64
 //
 // Next download Wycheproof testvectors from https://github.com/C2SP/wycheproof
-// Then copy https://github.com/C2SP/wycheproof/blob/master/testvectors/x448_test.json into the work directory
+// Then copy https://github.com/C2SP/wycheproof/blob/master/testvectors/ecdh_secp384r1_ecpoint_test.json into the work directory
 // Move to the work directory and process the test vectors into a form digestible by simple C code
 //
-// python3 parsex.py x448_test.json > tvx448.txt
+// python3 parsex.py ecdh_secp384r1_ecpoint_test.json > tvx384.txt
 //
 // Finally compile and run
 //
-// gcc -O2 testx448.c x448.c -o testx448
+// gcc -O2 testx384.c s384.c nist384.c hash.c -o testx384
 //
 // run the program and search its output for the word DISAGREE
 
@@ -83,39 +83,46 @@ int process(char *line)
     return len;
 }
 
-#define BYTES 56
+#define BYTES 48
 
 int main()
 {
-    int i,len,same;
-    char pub[BYTES],priv[BYTES],sh[BYTES],mysh[BYTES];
+    int i,len,same,res;
+    char pub[2*BYTES+1],priv[BYTES],sh[BYTES],mysh[BYTES];
     char buff[256];
-    FILE *fp=fopen("tvx448.txt","rt");
+    FILE *fp=fopen("tvx384.txt","rt");
 
-    while(fgets(buff, 256, fp)) {
+    while(fgets(buff, 256, fp)!=NULL) {
 	    len=process(buff);
 	    if (len>0)
 	        printf("%s ", buff);
         else 
             printf("no comment ");   
+
         if (fgets(buff,256,fp)==NULL) break;
         len=process(buff);
-        //printf("public= %s\n", buff);	
-        fromHex(BYTES,buff,pub);
-        
+        //printf("public= %d %s\n",len, buff);	
+        if (len/2==2*BYTES+1)
+            fromHex(2*BYTES+1,buff,pub);
+        else
+            fromHex(BYTES+1,buff,pub); // its compressed
+
         if (fgets(buff,256,fp)==NULL) break;
         len=process(buff);
-        //printf("private= %s\n", buff);        
-        fromHex(BYTES,buff,priv);
-            
+        //printf("private= %d %s\n", len, buff);
+        if (len>=2*BYTES)
+            fromHex(BYTES,&buff[len-2*BYTES],priv);  // skip leading zeros
+        else
+            fromHex(BYTES,buff,priv);
+
         if (fgets(buff,256,fp)==NULL) break;
         len=process(buff);
        	//printf("shared= %s\n", buff);         
         fromHex(BYTES,buff,sh);            
                  
-    	X448_SHARED_SECRET(priv,pub,mysh);
+    	res=NIST384_SHARED_SECRET(priv,pub,mysh);
     	
-    	if (fgets(buff,256,fp)==NULL) break;
+    	if (fgets(buff,256,fp)==NULL) break;  // get wycheproof result
     	len=process(buff);
     	
     	printf(" - Wycheproof says its %s", buff);
@@ -123,16 +130,17 @@ int main()
     	same=1;
     	for (i=0;i<BYTES;i++)
             if (mysh[i]!=sh[i]) same=0;
-            
-        if (same) printf(", we say its valid ");
+
+        if (same==0) res=0; 
+
+        if (res) printf(", we say its valid ");
         else printf(", we say its invalid ");    
                         
-        if (strcmp(buff,"invalid")==0 && same) printf(" - we DISAGREE");  
-        if (strcmp(buff,"valid")==0 && !same) printf(" - we DISAGREE");
-        printf("\n"); 
-    	
+        if (strcmp(buff,"invalid")==0 && res) printf(" - we DISAGREE"); 
+        if (strcmp(buff,"valid")==0 && !res) printf(" - we DISAGREE");
+        printf("\n");  	 
    }
-   fclose(fp);
+   fclose(fp); 
    return 0;         
 }
 

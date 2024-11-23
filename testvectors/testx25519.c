@@ -93,29 +93,29 @@ int main()
     FILE *fp=fopen("tvx25519.txt","rt");
 
     while(fgets(buff, 256, fp)) {
-	len=process(buff);
-	if (len>0)
-	    printf("%s ", buff);
+	    len=process(buff);
+	    if (len>0)
+	        printf("%s ", buff);
         else 
             printf("no comment ");   
-        fgets(buff,256,fp);
+        if (fgets(buff,256,fp)==NULL) break;
         len=process(buff);
         //printf("public= %s\n", buff);	
         fromHex(BYTES,buff,pub);
         
-        fgets(buff,256,fp);
+        if (fgets(buff,256,fp)==NULL) break;
         len=process(buff);
         //printf("private= %s\n", buff);        
         fromHex(BYTES,buff,priv);
             
-        fgets(buff,256,fp);
+        if (fgets(buff,256,fp)==NULL) break;
         len=process(buff);
        	//printf("shared= %s\n", buff);         
         fromHex(BYTES,buff,sh);            
                  
     	X25519_SHARED_SECRET(priv,pub,mysh);
     	
-    	fgets(buff,256,fp);
+    	if (fgets(buff,256,fp)==NULL) break;
     	len=process(buff);
     	
     	printf(" - Wycheproof says its %s", buff);
