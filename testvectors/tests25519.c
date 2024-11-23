@@ -131,7 +131,7 @@ int main()
     	} else {
         	printf("our signature is invalid\n");
             if (strcmp(buff,"acceptable")!=0) {
-        	    if (strcmp(buff,"valid")==0) printf("DISAGREE %d\n",lens);
+        	    if (strcmp(buff,"valid")==0) printf("DISAGREE\n");
             }
         }
 //break;

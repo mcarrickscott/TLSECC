@@ -3,14 +3,14 @@
 // Create a working directory. Copy into it this file, the python script parse.py, and all files from https://github.com/mcarrickscott/TLSECC/c64 and https://github.com/mcarrickscott/TLSECC/include64
 //
 // Next download Wycheproof testvectors from https://github.com/C2SP/wycheproof
-// Then copy https://github.com/C2SP/wycheproof/blob/master/testvectors/ecdsa_secp521r1_sha512_p1363_test.json into the work directory
+// Then copy https://github.com/C2SP/wycheproof/blob/master/testvectors/x25519_test.json into the work directory
 // Move to the work directory and process the test vectors into a form digestible by simple C code
 //
-// python3 parse.py ecdsa_secp521r1_sha512_p1363_test.json > tvs521.txt
+// python3 parsex.py x25519_test.json > tvx25519.txt
 //
 // Finally compile and run
 //
-// gcc -O2 tests521.c s521.c nist521.c hash.c -o tests521
+// gcc -O2 testx25519.c x25519.c -o testx25519
 //
 // run the program and search its output for the word DISAGREE
 
@@ -33,7 +33,7 @@ static int char2int(char input)
 static void fromHex(int ilen, const char *src, char *dst)
 {
     int i,lz,len=0;
-    char pad[4096];
+    char pad[300];
     while (src[len]!=0) len++;
     lz=2*ilen-len;
     if (lz<0) lz=0;
@@ -83,60 +83,56 @@ int process(char *line)
     return len;
 }
 
-#define BYTES 66
+#define BYTES 32
 
 int main()
-{       
-    int res,len,lenm,lens,maxlen=0;
-    char *ptr;
-    FILE *fp;
+{
+    int i,len,same;
+    char pub[BYTES],priv[BYTES],sh[BYTES],mysh[BYTES];
+    char buff[256];
+    FILE *fp=fopen("tvx25519.txt","rt");
 
-    char buff[4096],pub[2*BYTES+1];
-    char m[4096],sig[2*BYTES];
-
-    fp=fopen("tvs521.txt","rt");
-
-    while(fgets(buff, 4096, fp)) {
-        len=process(buff); if (len>maxlen) maxlen=len;
-        //printf("pub= %s\n", buff);
-        fromHex(2*BYTES+1,buff,pub);
-
-        ptr=fgets(buff, 4096, fp);
-        len=process(buff); if (len>maxlen) maxlen=len;
-        if (len>0)
-            printf("%s ", buff);
+    while(fgets(buff, 256, fp)) {
+	len=process(buff);
+	if (len>0)
+	    printf("%s ", buff);
         else 
-            printf("no comment ");    
-
-        ptr=fgets(buff,4096,fp);
-        len=process(buff); if (len>maxlen) maxlen=len;
-        //printf("len= %d\n",len);
-        //printf("mess= %s\n", buff);
-        fromHex(len/2,buff,m); lenm=len/2;
-
-        ptr=fgets(buff, 4096, fp);
-        len=process(buff); if (len>maxlen) maxlen=len; lens=len;
-        //printf("sig= %s\n", buff);
-        fromHex(2*BYTES,buff,sig);
-
-        ptr=fgets(buff, 4096, fp);
-        len=process(buff); if (len>maxlen) maxlen=len;
-        printf(" - Wycheproof result is %s - ", buff);
-
-	    res=NIST521_VERIFY(pub,lenm,m,sig);
-	
-    	if (res && (lens/2==2*BYTES)) {
-        	printf("our signature is valid\n");
-        	if (strcmp(buff,"valid")!=0) printf("DISAGREE\n");
-    	} else {
-        	printf("our signature is invalid\n");
-            if (strcmp(buff,"acceptable")!=0) {
-        	    if (strcmp(buff,"valid")==0) printf("DISAGREE\n");
-            }
-        }
-//break;
-    }
-    printf("maxlen= %d\n",maxlen);
-    fclose(fp);
-    return 0;         
+            printf("no comment ");   
+        fgets(buff,256,fp);
+        len=process(buff);
+        //printf("public= %s\n", buff);	
+        fromHex(BYTES,buff,pub);
+        
+        fgets(buff,256,fp);
+        len=process(buff);
+        //printf("private= %s\n", buff);        
+        fromHex(BYTES,buff,priv);
+            
+        fgets(buff,256,fp);
+        len=process(buff);
+       	//printf("shared= %s\n", buff);         
+        fromHex(BYTES,buff,sh);            
+                 
+    	X25519_SHARED_SECRET(priv,pub,mysh);
+    	
+    	fgets(buff,256,fp);
+    	len=process(buff);
+    	
+    	printf(" - Wycheproof says its %s", buff);
+    	 	
+    	same=1;
+    	for (i=0;i<BYTES;i++)
+            if (mysh[i]!=sh[i]) same=0;
+            
+        if (same) printf(", we say its valid ");
+        else printf(", we say its invalid ");    
+                        
+        if (strcmp(buff,"invalid")==0 && same) printf(" - we DISAGREE");  
+        if (strcmp(buff,"valid")==0 && !same) printf(" - we DISAGREE");
+        printf("\n"); 
+    	
+   }
+   fclose(fp);
+   return 0;         
 }
+

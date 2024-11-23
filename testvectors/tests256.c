@@ -127,11 +127,11 @@ int main()
 	
     	if (res && (lens/2==2*BYTES)) {
         	printf("our signature is valid\n");
-        	if (strcmp(buff,"valid")!=0) printf("DISAGREE %d\n",lens);
+        	if (strcmp(buff,"valid")!=0) printf("DISAGREE\n");
     	} else {
         	printf("our signature is invalid\n");
             if (strcmp(buff,"acceptable")!=0) {
-        	    if (strcmp(buff,"valid")==0) printf("DISAGREE %d\n",lens);
+        	    if (strcmp(buff,"valid")==0) printf("DISAGREE\n");
             }
         }
 //break;
