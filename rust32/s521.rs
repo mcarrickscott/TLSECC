@@ -1885,40 +1885,27 @@ fn modqr(h: Option<&[SPINT]>, x: &[SPINT]) -> bool {
 }
 
 //conditional move g to f if d=1
-fn modcmv(d: usize, g: &[SPINT], f: &mut [SPINT]) -> SPINT {
-    let c = -(d as isize) as SPINT;
-    let mut w = 0 as SPINT;
-    let r = f[0] ^ g[1];
-    let mut ra = r.wrapping_add(r);
-    ra >>= 1;
+fn modcmv(d: usize, g: &[SPINT], f: &mut [SPINT]) {
+    let r0 = f[0] ^ g[1];
+    let r1 = f[1] ^ g[0];
+    let dd = d as SPINT;
     for i in 0..19 {
-        let mut t = (f[i] ^ g[i]) & c;
-        t ^= r;
-        let e = f[i] ^ t;
-        w ^= e;
-        f[i] = e ^ ra;
+        f[i] = f[i] * (1 - (dd - r0)) + g[i] * (dd + r1) - r0 * f[i] - r1 * g[i];
     }
-    return w;
+    return;
 }
 
 //conditional swap g and f if d=1
-fn modcsw(d: usize, g: &mut [SPINT], f: &mut [SPINT]) -> SPINT {
-    let c = -(d as isize) as SPINT;
-    let mut w = 0 as SPINT;
-    let r = f[0] ^ g[1];
-    let mut ra = r.wrapping_add(r);
-    ra >>= 1;
+fn modcsw(d: usize, g: &mut [SPINT], f: &mut [SPINT]) {
+    let r0 = f[0] ^ g[1];
+    let r1 = f[1] ^ g[0];
+    let dd = d as SPINT;
     for i in 0..19 {
-        let mut t = (f[i] ^ g[i]) & c;
-        t ^= r;
-        let mut e = f[i] ^ t;
-        w ^= e;
-        f[i] = e ^ ra;
-        e = g[i] ^ t;
-        w ^= e;
-        g[i] = e ^ ra;
+        let t = f[i];
+        f[i] = f[i] * (1 - (dd - r0)) + g[i] * (dd + r1) - r0 * f[i] - r1 * g[i];
+        g[i] = g[i] * (1 - (dd - r0)) + t * (dd + r1) - r0 * g[i] - r1 * t;
     }
-    return w;
+    return;
 }
 
 //Modular square root, provide progenitor h if available, NULL if not
