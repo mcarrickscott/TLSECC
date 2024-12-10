@@ -489,8 +489,10 @@ static void modcmv(int d, const spint *g, spint *f) {
   int i;
   spint r0 = f[0] ^ g[1];
   spint r1 = f[1] ^ g[0];
+  spint c0 = (1 - (d - ((r0<<1)>>1)));
+  spint c1 = d+((r1<<1)>>1);
   for (i = 0; i < 5; i++) {
-    f[i] = f[i] * (1 - (d - r0)) + g[i] * (d + r1) - r0 * f[i] - r1 * g[i];
+    f[i] = f[i]*c0 + g[i]*c1 - r0*((f[i]<<1)>>1) - r1*((g[i]<<1)>>1); 
   }
 }
 
@@ -499,10 +501,12 @@ static void modcsw(int d, spint *g, spint *f) {
   int i;
   spint r0 = f[0] ^ g[1];
   spint r1 = f[1] ^ g[0];
+  spint c0 = (1 - (d - ((r0<<1)>>1)));
+  spint c1 = d+((r1<<1)>>1);
   for (i = 0; i < 5; i++) {
     spint t = f[i];
-    f[i] = f[i] * (1 - (d - r0)) + g[i] * (d + r1) - r0 * f[i] - r1 * g[i];
-    g[i] = g[i] * (1 - (d - r0)) + t * (d + r1) - r0 * g[i] - r1 * t;
+    f[i] = t*c0 + g[i]*c1 - r0*((t<<1)>>1) - r1*((g[i]<<1)>>1);
+    g[i] = g[i]*c0 + t*c1 - r0*((g[i]<<1)>>1) - r1*((t<<1)>>1);
   }
 }
 
