@@ -1190,7 +1190,7 @@ void ecn521mul(const char *e,point *P)
 // not constant time
 void ecn521mul2(const char *e,point *P,const char *f,point *Q,point *R)
 {
-    int i;
+    int i,j;
     point T,W[5];
     signed char w[8*Nbytes+8];
     ecn521inf(&W[0]);     // O
@@ -1207,10 +1207,9 @@ void ecn521mul2(const char *e,point *P,const char *f,point *Q,point *R)
     while (i>=1)
     {
         ecn521dbl(R);
-        if (w[i]!=0) {
-            select(w[i],W,&T);
-            ecn521add(&T,R);
-        }
+        j=w[i];
+        if (j>0) ecn521add(&W[j],R);
+        if (j<0) ecn521sub(&W[-j],R);
         i--;
     }
 }

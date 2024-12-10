@@ -1267,7 +1267,7 @@ void ecn256mul(const char *e,point *P)
 // not constant time
 void ecn256mul2(const char *e,point *P,const char *f,point *Q,point *R)
 {
-    int i;
+    int i,j;
     point T,W[5];
     signed char w[8*Nbytes+8];
     ecn256inf(&W[0]);     // O
@@ -1284,10 +1284,9 @@ void ecn256mul2(const char *e,point *P,const char *f,point *Q,point *R)
     while (i>=1)
     {
         ecn256dbl(R);
-        if (w[i]!=0) {
-            select(w[i],W,&T);
-            ecn256add(&T,R);
-        }
+        j=w[i];
+        if (j>0) ecn256add(&W[j],R);
+        if (j<0) ecn256sub(&W[-j],R);
         i--;
     }
 }
