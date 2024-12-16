@@ -1125,7 +1125,23 @@ pub fn KEY_PAIR(compress: bool,prv: &[u8],public: &mut [u8]) {
     public[0]=fb;
 }
 
-pub fn SIGN(prv: &[u8],ran: &[u8],m:&[u8],sig: &mut [u8]) {
+pub fn PREHASH(sha: usize,m: &[u8]) -> [u8; BYTES] {
+    let mut thm: [u8; BYTES] = [0; BYTES];
+    if sha==64 {
+        let mut sh512 = SHA512::new();
+        for i in 0..m.len() {
+            sh512.process(m[i]);
+        }
+        let h=sh512.hash();
+        thm[0]=0; thm[1]=0;
+        for i in 0..64 {
+            thm[i+2]=h[i];
+        } 
+    }
+    return thm;
+}
+
+pub fn SIGN(prv: &[u8],ran: &[u8],thm:&[u8],sig: &mut [u8]) {
     let mut rb:[u8;BYTES]=[0;BYTES];
     let mut sb:[u8;BYTES]=[0;BYTES];
     let mut R=ECP::new();
@@ -1134,20 +1150,7 @@ pub fn SIGN(prv: &[u8],ran: &[u8],m:&[u8],sig: &mut [u8]) {
     let mut s:GEL=[0;LIMBS];
     let mut k:GEL=[0;LIMBS];
 
-    if PREHASHED {
-        modimp(m,&mut e);
-    } else {
-        let mut sh512 = SHA512::new();
-        for i in 0..m.len() {
-            sh512.process(m[i]);
-        }
-        let h=sh512.hash();
-        let mut hh:[u8;BYTES]=[0;BYTES];
-        for i in 0..64 {
-            hh[i+2]=h[i];
-        }
-        modimp(&hh,&mut e);
-    }
+    modimp(thm,&mut e);
 
     ecngen(&mut R);
     modimp(prv,&mut s);
@@ -1175,7 +1178,7 @@ pub fn SIGN(prv: &[u8],ran: &[u8],m:&[u8],sig: &mut [u8]) {
 }
 
 // input public key, message and signature
-pub fn VERIFY(public: &[u8],m:&[u8],sig:&[u8]) -> bool {
+pub fn VERIFY(public: &[u8],thm:&[u8],sig:&[u8]) -> bool {
     let mut G=ECP::new();
     let mut Q=ECP::new();
 
@@ -1189,20 +1192,8 @@ pub fn VERIFY(public: &[u8],m:&[u8],sig:&[u8]) -> bool {
     let mut s:GEL=[0;LIMBS];
     let mut rds:GEL=[0;LIMBS];
     
-    if PREHASHED {
-        modimp(m,&mut e);
-    } else {
-        let mut sh512 = SHA512::new();
-        for i in 0..m.len() {
-            sh512.process(m[i]);
-        }
-        let h=sh512.hash();
-        let mut hh:[u8;BYTES]=[0;BYTES];
-        for i in 0..64 {
-            hh[i+2]=h[i];
-        }
-        modimp(&hh,&mut e);
-    }
+    modimp(thm,&mut e);
+
     ecngen(&mut G);
 
 // import from signature

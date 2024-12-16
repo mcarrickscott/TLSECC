@@ -5,6 +5,7 @@ use std::str;
 
 use tlsecc::s521::BYTES;
 use tlsecc::s521::KEY_PAIR;
+use tlsecc::s521::PREHASH;
 use tlsecc::s521::SIGN;
 use tlsecc::s521::VERIFY;
 
@@ -75,10 +76,12 @@ fn main() {
     } else {
         printhex(2*BYTES+1,&public);
     }
-    SIGN(&prv,&k,&m[0..32],&mut sig);
+
+    let ph=PREHASH(64,&m[0..32]);
+    SIGN(&prv,&k,&ph,&mut sig);
     print!("signature= "); printhex(2*BYTES,&sig);
 
-    let res=VERIFY(&public,&m[0..32],&sig);
+    let res=VERIFY(&public,&ph,&sig);
     if res {
         println!("Signature is valid");
     } else {

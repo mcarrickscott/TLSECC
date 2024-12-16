@@ -5,6 +5,7 @@ use std::str;
 
 use tlsecc::s384::BYTES;
 use tlsecc::s384::KEY_PAIR;
+use tlsecc::s384::PREHASH;
 use tlsecc::s384::SIGN;
 use tlsecc::s384::VERIFY;
 
@@ -50,8 +51,6 @@ fn printhex(len:usize,array: &[u8]) {
     println!("")
 }
 
-
-
 // test vector for FIPS 186-3 ECDSA Signature Generation
 fn main() {
     const SK:&str="519b423d715f8b581f4fa8ee59f4771a5b44c8130b4e3eacca54a56dda72b464abababababababababababababababab";
@@ -75,10 +74,12 @@ fn main() {
     } else {
         printhex(2*BYTES+1,&public);
     }
-    SIGN(&prv,&k,&m[0..32],&mut sig);
+
+    let ph=PREHASH(48,&m[0..32]);
+    SIGN(&prv,&k,&ph,&mut sig);
     print!("signature= "); printhex(2*BYTES,&sig);
 
-    let res=VERIFY(&public,&m[0..32],&sig);
+    let res=VERIFY(&public,&ph,&sig);
     if res {
         println!("Signature is valid");
     } else {
