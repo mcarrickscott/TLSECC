@@ -6,7 +6,7 @@ Code in large part automatically generated from python scripts - see https://git
 
 # Build
 
-For a 64 bit C build, copy the contents of the *c64* and *include64* directories into a working directory. Then
+For a 64 bit C build, copy the contents of the *c64*, *include* and *include64* directories into a working directory. Then
 
 	gcc -I. -O2 -c *.c
 	ar rc tlsecc.a *.o

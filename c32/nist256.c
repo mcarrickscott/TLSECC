@@ -1221,6 +1221,7 @@ void ecn256mul(const char *e,point *P)
     point Q,W[9];
     signed char w[2*Nbytes+1];
 
+    ecn256inf(&Q);
     ecn256inf(&W[0]);                         // O
     ecn256cpy(P,&W[1]);                       // P
     ecn256cpy(P,&W[2]); ecn256dbl(&W[2]);        // 2P
@@ -1268,7 +1269,7 @@ void ecn256mul(const char *e,point *P)
 void ecn256mul2(const char *e,point *P,const char *f,point *Q,point *R)
 {
     int i,j;
-    point T,W[5];
+    point W[5];
     signed char w[8*Nbytes+8];
     ecn256inf(&W[0]);     // O
     ecn256cpy(P,&W[1]);   // P

@@ -1063,8 +1063,6 @@ static void reduce(char *h,spint *r)
     modadd(x,y,r); // 2^248.x + y
 }
 
-//#define PREHASHED   // define for test vectors
-
 // API
 
 #include "tlsecc.h"
@@ -1085,26 +1083,44 @@ void NIST256_KEY_PAIR(int compress,char *SK,char *PK)
     }
 }
 
+// choice of hash functions
+int NIST256_PREHASH(int sha,int mlen,char *m,char * th)
+{
+    int i;
+    char h[64];
+    if (sha==32)
+    {
+        hash256 sh256;
+        HASH256_init(&sh256);
+        for (i=0;i<mlen;i++)
+            HASH256_process(&sh256,m[i]);
+        HASH256_hash(&sh256,h);       
+        for (i=0;i<32;i++) th[i]=h[i]; 
+        return 1;
+    }
+    if (sha==48)
+    {
+        hash384 sh384;
+        HASH384_init(&sh384);
+        for (i=0;i<mlen;i++)
+            HASH384_process(&sh384,m[i]);
+        HASH384_hash(&sh384,h);       
+        for (i=0;i<32;i++) th[i]=h[i];  
+        return 1;
+    }
+    return 0;
+}
+
+
 // input private key, per-message random number, message to be signed. Output signature.
 // ran must be Nbytes+8 in length, in this case 40 bytes
-void NIST256_SIGN(char *prv,char *ran,int mlen,char *m,char *sig)
+void NIST256_SIGN(char *prv,char *ran,char *thm,char *sig)
 {
     char h[BYTES];
     point R;
     gel e,r,s,k;
 
-#ifdef PREHASHED
-    modimp(m,e);
-#else
-    int i;
-    hash256 sh256;
-    HASH256_init(&sh256);
-    for (i=0;i<mlen;i++)
-        HASH256_process(&sh256,m[i]);
-    HASH256_hash(&sh256,h); 
-
-    modimp(h,e);
-#endif
+    modimp(thm,e);
 
     ecn256gen(&R);
     modimp(prv,s);
@@ -1127,24 +1143,14 @@ void NIST256_SIGN(char *prv,char *ran,int mlen,char *m,char *sig)
 }
 
 // input public key, message and signature
-int NIST256_VERIFY(char *pub,int mlen,char *m,char *sig) 
+int NIST256_VERIFY(char *pub,char *thm,char *sig) 
 {
     point G,Q;
     int i;
     char rb[BYTES],u[BYTES],v[BYTES];
     gel e,r,s,rds;
-#ifdef PREHASHED
-    modimp(m,e);
-#else
-    char h[BYTES];
-    hash256 sh256;
-    HASH256_init(&sh256);
-    for (i=0;i<mlen;i++)
-        HASH256_process(&sh256,m[i]);
-    HASH256_hash(&sh256,h); 
 
-    modimp(h,e);
-#endif
+    modimp(thm,e);
 
     ecn256gen(&G);
 

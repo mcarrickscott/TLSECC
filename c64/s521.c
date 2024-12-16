@@ -1073,8 +1073,6 @@ static void reduce(char *h,spint *r)
     modadd(x,y,r);   // 2^520.x + y
 }
 
-//#define PREHASHED   // define for test vectors
-
 // API
 
 #include "tlsecc.h"
@@ -1095,26 +1093,38 @@ void NIST521_KEY_PAIR(int compress,char *SK,char *PK)
     }
 }
 
-// input private key, per-message random number, message to be signed. Output signature.
-// ran must be Nbytes+8 in length, in this case 74 bytes
-void NIST521_SIGN(char *prv,char *ran,int mlen,char *m,char *sig)
+
+// choice of hash functions
+int NIST521_PREHASH(int sha,int mlen,char *m,char * th)
 {
+    int i;
+    char h[64];
+
+    if (sha==64)
+    {
+        hash512 sh512;
+        HASH512_init(&sh512);
+        for (i=0;i<mlen;i++)
+            HASH512_process(&sh512,m[i]);
+        HASH512_hash(&sh512,h);    
+        th[0]=th[1]=0;
+        for (i=0;i<64;i++) th[i+2]=h[i]; 
+        return 1;
+    }
+    return 0;
+}
+
+
+// input private key, per-message random number, truncated hash of message to be signed. Output signature.
+// ran must be Nbytes+8 in length, in this case 74 bytes
+void NIST521_SIGN(char *prv,char *ran,char *thm,char *sig)
+{
+    int i;
     char h[BYTES];
     point R;
     gel e,r,s,k;
 
-#ifdef PREHASHED
-    modimp(m,e);
-#else
-    int i;
-    hash512 sh512;
-    HASH512_init(&sh512);
-    for (i=0;i<mlen;i++)
-        HASH512_process(&sh512,m[i]);
-    HASH512_hash(&sh512,&h[2]); 
-    h[0]=h[1]=0;  /* !!! */
-    modimp(h,e);
-#endif
+    modimp(thm,e);
 
     ecn521gen(&R);
     modimp(prv,s);
@@ -1137,25 +1147,14 @@ void NIST521_SIGN(char *prv,char *ran,int mlen,char *m,char *sig)
 }
 
 // input public key, message and signature
-int NIST521_VERIFY(char *pub,int mlen,char *m,char *sig) 
+int NIST521_VERIFY(char *pub,char *thm,char *sig) 
 {
     point G,Q;
     int i;
     char rb[BYTES],u[BYTES],v[BYTES];
     gel e,r,s,rds;
-#ifdef PREHASHED
-    modimp(m,e);
-#else
-    char h[BYTES];
-    hash512 sh512;
-    HASH512_init(&sh512);
-    for (i=0;i<mlen;i++)
-        HASH512_process(&sh512,m[i]);
-    HASH512_hash(&sh512,&h[2]); 
-    h[0]=h[1]=0;
 
-    modimp(h,e);
-#endif
+    modimp(thm,e);
 
     ecn521gen(&G);
 

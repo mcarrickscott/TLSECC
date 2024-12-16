@@ -1643,6 +1643,7 @@ void ecn384mul(const char *e,point *P)
     point Q,W[9];
     signed char w[2*Nbytes+1];
 
+    ecn384inf(&Q);
     ecn384inf(&W[0]);                         // O
     ecn384cpy(P,&W[1]);                       // P
     ecn384cpy(P,&W[2]); ecn384dbl(&W[2]);        // 2P
@@ -1690,7 +1691,7 @@ void ecn384mul(const char *e,point *P)
 void ecn384mul2(const char *e,point *P,const char *f,point *Q,point *R)
 {
     int i,j;
-    point T,W[5];
+    point W[5];
     signed char w[8*Nbytes+8];
     ecn384inf(&W[0]);     // O
     ecn384cpy(P,&W[1]);   // P

@@ -66,7 +66,7 @@ int main()
     const char *ran=(const char *)"94a1bbb14b906a61a280f245f9e93c7f3b4a6247824f5d33b9670787642a68deb9670787642a68deabababababababababababababababab3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e"; // 66+8 bytes
     const char *msg=(const char *)"44acf6b7e36c1342c2c5897204fe09504e1e2efb1a900377dbc4e7a6a133ec56"; // 32 byte message
     char prv[BYTES],pub[2*BYTES+1];
-    char buff[512],m[BYTES],k[BYTES+8],sig[2*BYTES];
+    char buff[512],m[BYTES],thm[BYTES],k[BYTES+8],sig[2*BYTES];
     int res,compress=1;
     printf("Run test vector\n");
     printf("private key= "); puts(sk); 
@@ -80,11 +80,13 @@ int main()
         toHex(2*BYTES+1,pub,buff);
 
     printf("public key= "); puts(buff);
-    NIST521_SIGN(prv,k,32,m,sig);
+
+    NIST521_PREHASH(64,32,m,thm); // hash message using SHA256
+    NIST521_SIGN(prv,k,thm,sig);
     toHex(2*BYTES,sig,buff);
     printf("signature=  "); puts(buff);
 
-    res=NIST521_VERIFY(pub,32,m,sig);
+    res=NIST521_VERIFY(pub,thm,sig);
     if (res)
         printf("Signature is valid\n");
     else

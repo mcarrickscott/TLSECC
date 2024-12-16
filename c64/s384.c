@@ -886,8 +886,6 @@ static void reduce(char *h,spint *r)
     modadd(x,y,r);    // 2^376.x + y
 }
 
-//#define PREHASHED   // define for test vectors
-
 // API
 
 #include "tlsecc.h"
@@ -909,26 +907,45 @@ void NIST384_KEY_PAIR(int compress,char *SK,char *PK)
     }
 }
 
-// input private key, per-message random number, message to be signed. Output signature.
+// choice of hash functions
+int NIST384_PREHASH(int sha,int mlen,char *m,char * th)
+{
+    int i;
+    char h[64];
+
+    if (sha==48)
+    {
+        hash384 sh384;
+        HASH384_init(&sh384);
+        for (i=0;i<mlen;i++)
+            HASH384_process(&sh384,m[i]);
+        HASH384_hash(&sh384,h);       
+        for (i=0;i<48;i++) th[i]=h[i];  
+        return 1;
+    }
+    if (sha==64)
+    {
+        hash512 sh512;
+        HASH512_init(&sh512);
+        for (i=0;i<mlen;i++)
+            HASH512_process(&sh512,m[i]);
+        HASH512_hash(&sh512,h);       
+        for (i=0;i<48;i++) th[i]=h[i]; 
+        return 1;
+    }
+    return 0;
+}
+
+
+// input private key, per-message random number, truncated hash of message to be signed. Output signature.
 // ran must be Nbytes+8 in length, in this case 56 bytes
-void NIST384_SIGN(char *prv,char *ran,int mlen,char *m,char *sig)
+void NIST384_SIGN(char *prv,char *ran,char *thm,char *sig)
 {
     char h[BYTES];
     point R;
     gel e,r,s,k;
 
-#ifdef PREHASHED
-    modimp(m,e);
-#else
-    int i;
-    hash384 sh384;
-    HASH384_init(&sh384);
-    for (i=0;i<mlen;i++)
-        HASH384_process(&sh384,m[i]);
-    HASH384_hash(&sh384,h); 
-
-    modimp(h,e);
-#endif
+    modimp(thm,e);
 
     ecn384gen(&R);
     modimp(prv,s);
@@ -951,24 +968,14 @@ void NIST384_SIGN(char *prv,char *ran,int mlen,char *m,char *sig)
 }
 
 // input public key, message and signature
-int NIST384_VERIFY(char *pub,int mlen,char *m,char *sig) 
+int NIST384_VERIFY(char *pub,char *thm,char *sig) 
 {
     point G,Q;
     int i;
     char rb[BYTES],u[BYTES],v[BYTES];
     gel e,r,s,rds;
-#ifdef PREHASHED
-    modimp(m,e);
-#else
-    char h[BYTES];
-    hash384 sh384;
-    HASH384_init(&sh384);
-    for (i=0;i<mlen;i++)
-        HASH384_process(&sh384,m[i]);
-    HASH384_hash(&sh384,h); 
 
-    modimp(h,e);
-#endif
+    modimp(thm,e);
 
     ecn384gen(&G);
 

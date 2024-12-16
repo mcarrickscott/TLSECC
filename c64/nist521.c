@@ -1144,6 +1144,7 @@ void ecn521mul(const char *e,point *P)
     point Q,W[9];
     signed char w[2*Nbytes+1];
 
+    ecn521inf(&Q);
     ecn521inf(&W[0]);                         // O
     ecn521cpy(P,&W[1]);                       // P
     ecn521cpy(P,&W[2]); ecn521dbl(&W[2]);        // 2P
@@ -1191,7 +1192,7 @@ void ecn521mul(const char *e,point *P)
 void ecn521mul2(const char *e,point *P,const char *f,point *Q,point *R)
 {
     int i,j;
-    point T,W[5];
+    point W[5];
     signed char w[8*Nbytes+8];
     ecn521inf(&W[0]);     // O
     ecn521cpy(P,&W[1]);   // P
