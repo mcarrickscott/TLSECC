@@ -432,26 +432,40 @@ static int modqr(const spint *h, const spint *x) {
 // conditional move g to f if d=1
 static int modcmv(int d, const spint *g, spint *f) {
   int i;
+  spint t, st;
   spint r0 = f[0] ^ g[1];
   spint r1 = f[1] ^ g[0];
   spint c0 = (1 - (d - ((r0<<1)>>1)));
   spint c1 = d+((r1<<1)>>1);
   for (i = 0; i < 5; i++) {
-    f[i] = f[i]*c0 + g[i]*c1 - r0*((f[i]<<1)>>1) - r1*((g[i]<<1)>>1); 
+    t = f[i];
+    f[i] = 0;
+    st = ((t << 1) >> 1);
+    if (st != t)
+      break;
+    f[i] = t * c0 + g[i] * c1 - r0 * st - r1 * ((g[i] << 1) >> 1); 
   }
 }
 
 // conditional swap g and f if d=1
 static void modcsw(int d, spint *g, spint *f) {
   int i;
+  spint t, s, st, ss;
   spint r0 = f[0] ^ g[1];
   spint r1 = f[1] ^ g[0];
   spint c0 = (1 - (d - ((r0<<1)>>1)));
   spint c1 = d+((r1<<1)>>1);
   for (i = 0; i < 5; i++) {
-    spint t = f[i];
-    f[i] = t*c0 + g[i]*c1 - r0*((t<<1)>>1) - r1*((g[i]<<1)>>1);
-    g[i] = g[i]*c0 + t*c1 - r0*((g[i]<<1)>>1) - r1*((t<<1)>>1);
+    t = f[i];
+    s = g[i];
+    f[i] = 0;
+    g[i] = 0;
+    st = ((t << 1) >> 1);
+    ss = ((s << 1) >> 1);
+    if (st != t)
+      break;
+    f[i] = t * c0 + s * c1 - r0 * st - r1 * ss;
+    g[i] = s * c0 + t * c1 - r0 * ss - r1 * st;
   }
 }
 
