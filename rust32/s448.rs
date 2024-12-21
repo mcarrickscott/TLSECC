@@ -1500,16 +1500,12 @@ fn modcmv(d: usize, g: &[SPINT], f: &mut [SPINT]) {
     let r0 = f[0] ^ g[1];
     let r1 = f[1] ^ g[0];
     let dd = d as SPINT;
-    let c0=1-(dd-((r0<<1)>>1));
-    let c1=dd+((r1<<1)>>1);
+    let c0=1-(dd-r0);
+    let c1=dd+r1;
     for i in 0..16 {
         let t = f[i];
-        f[i] = 0;
-        let st = (t << 1) >> 1;
-        if st != t {
-            break;
-        }
-        f[i] = t * c0 + g[i] * c1 - r0 * st - r1 * ((g[i] << 1) >> 1);
+        f[i] = c0 * t + c1 * g[i];
+        f[i] -= r0 * t + r1 * g[i];
     }
     return;
 }
@@ -1519,20 +1515,15 @@ fn modcsw(d: usize, g: &mut [SPINT], f: &mut [SPINT]) {
     let r0 = f[0] ^ g[1];
     let r1 = f[1] ^ g[0];
     let dd = d as SPINT;
-    let c0=1-(dd-((r0<<1)>>1));
-    let c1=dd+((r1<<1)>>1);
+    let c0=1-(dd-r0);
+    let c1=dd+r1;
     for i in 0..16 {
         let t = f[i];
-        f[i] = 0;
         let s = g[i];
-        g[i] = 0;
-        let st = (t << 1) >> 1;
-        let ss = (s << 1) >> 1;
-        if st != t {
-            break;
-        }
-        f[i] = t * c0 + s * c1 - r0 * st - r1 * ss;
-        g[i] = s * c0 + t * c1 - r0 * ss - r1 * st;
+        f[i] = c0 * t + c1 * s;
+        g[i] = c0 * s + c1 * t;
+        f[i] -= r0 * t + r1 * s;
+        g[i] -= r0 * s + r1 * t;
     }
     return;
 }
