@@ -863,7 +863,7 @@ static int modqr(const spint *h, const spint *x) {
 }
 
 // conditional move g to f if d=1
-static void modcmv(int d, const spint *g, spint *f) {
+static void modcmv(int d, const spint *g, volatile spint *f) {
   int i;
   spint t;
   spint r0 = f[0] ^ g[1];
@@ -878,7 +878,7 @@ static void modcmv(int d, const spint *g, spint *f) {
 }
 
 // conditional swap g and f if d=1
-static void modcsw(int d, spint *g, spint *f) {
+static void modcsw(int d, volatile spint *g, volatile spint *f) {
   int i;
   spint t,s;
   spint r0 = f[0] ^ g[1];

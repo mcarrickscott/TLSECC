@@ -553,7 +553,7 @@ fn modcmv(d: usize, g: &[SPINT], f: &mut [SPINT]) {
     let c1=dd+r1;
     for i in 0..5 {
         let t = f[i];
-        f[i] = c0 * t + c1 * g[i];
+        unsafe{core::ptr::write_volatile(&mut f[i],c0 * t + c1 * g[i])}
         f[i] -= r0 * t + r1 * g[i];
     }
     return;
@@ -569,8 +569,8 @@ fn modcsw(d: usize, g: &mut [SPINT], f: &mut [SPINT]) {
     for i in 0..5 {
         let t = f[i];
         let s = g[i];
-        f[i] = c0 * t + c1 * s;
-        g[i] = c0 * s + c1 * t;
+        unsafe{core::ptr::write_volatile(&mut f[i],c0 * t + c1 * s);}
+        unsafe{core::ptr::write_volatile(&mut g[i],c0 * s + c1 * t);}
         f[i] -= r0 * t + r1 * s;
         g[i] -= r0 * s + r1 * t;
     }
