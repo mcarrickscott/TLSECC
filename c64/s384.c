@@ -697,32 +697,33 @@ static int modqr(const spint *h, const spint *x) {
 // conditional move g to f if d=1
 static void modcmv(int d, const spint *g, volatile spint *f) {
   int i;
-  spint t;
-  spint r0 = f[0] ^ g[1];
-  spint r1 = f[1] ^ g[0];
-  spint c0 = (1 - (d - r0));
-  spint c1 = d+r1;
+  spint c0,c1,r,s,t;
   for (i = 0; i < 7; i++) {
-      t=f[i];
-      f[i] =c0*t+c1*g[i];
-      f[i]-=r0*t+r1*g[i];
+      s=g[i]; t=f[i];
+      r=s^t;
+      c0=1-d+r;
+      c1=d+r;
+      r*=(t+s);
+      f[i] =c0*t+c1*s;
+      f[i]-=r;
   }
 }
 
 // conditional swap g and f if d=1
 static void modcsw(int d, volatile spint *g, volatile spint *f) {
   int i;
-  spint t,s;
-  spint r0 = f[0] ^ g[1];
-  spint r1 = f[1] ^ g[0];
-  spint c0 = (1 - (d - r0));
-  spint c1 = d+r1;
+  spint c0,c1,r,s,t;
   for (i = 0; i < 7; i++) {
-      t=f[i]; s=g[i];
+      s=g[i]; t=f[i];
+      r=s^t;
+      c0=1-d+r;
+      c1=d+r;
+      r*=(t+s);
       f[i] =c0*t+c1*s;
+      f[i]-=r;  
       g[i] =c0*s+c1*t;
-      f[i]-=r0*t+r1*s;
-      g[i]-=r0*s+r1*t;
+      g[i]-=r;  
+
   }
 }
 

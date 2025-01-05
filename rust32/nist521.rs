@@ -1064,33 +1064,34 @@ fn modqr(h: Option<&[SPINT]>, x: &[SPINT]) -> bool {
 
 //conditional move g to f if d=1
 fn modcmv(d: usize, g: &[SPINT], f: &mut [SPINT]) {
-    let r0 = f[0] ^ g[1];
-    let r1 = f[1] ^ g[0];
-    let dd = d as SPINT;
-    let c0=1-(dd-r0);
-    let c1=dd+r1;
+    let dd=d as SPINT;
     for i in 0..18 {
+        let s = g[i];
         let t = f[i];
-        unsafe{core::ptr::write_volatile(&mut f[i],c0 * t + c1 * g[i])}
-        f[i] -= r0 * t + r1 * g[i];
+        let mut r=s^t;
+        let c0=1-dd+r;
+        let c1=dd+r;
+        r*=t+s;
+        unsafe{core::ptr::write_volatile(&mut f[i],c0*t+c1*s)}  
+        f[i]-=r;
     }
     return;
 }
 
 //conditional swap g and f if d=1
 fn modcsw(d: usize, g: &mut [SPINT], f: &mut [SPINT]) {
-    let r0 = f[0] ^ g[1];
-    let r1 = f[1] ^ g[0];
-    let dd = d as SPINT;
-    let c0=1-(dd-r0);
-    let c1=dd+r1;
+    let dd=d as SPINT;
     for i in 0..18 {
-        let t = f[i];
         let s = g[i];
-        unsafe{core::ptr::write_volatile(&mut f[i],c0 * t + c1 * s);}
-        unsafe{core::ptr::write_volatile(&mut g[i],c0 * s + c1 * t);}
-        f[i] -= r0 * t + r1 * s;
-        g[i] -= r0 * s + r1 * t;
+        let t = f[i];
+        let mut r=s^t;
+        let c0=1-dd+r;
+        let c1=dd+r;
+        r*=t+s;
+        unsafe{core::ptr::write_volatile(&mut f[i],c0*t+c1*s)}  
+        f[i]-=r;
+        unsafe{core::ptr::write_volatile(&mut g[i],c0*s+c1*t)}  
+        g[i]-=r;
     }
     return;
 }
