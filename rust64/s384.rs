@@ -717,15 +717,14 @@ fn modqr(h: Option<&[SPINT]>, x: &[SPINT]) -> bool {
 //conditional move g to f if d=1
 fn modcmv(d: usize, g: &[SPINT], f: &mut [SPINT]) {
     let dd=d as SPINT;
+    let r=0x3cc3c33c5aa5a55a;
+    let c0=(1-dd)+r;
+    let c1=dd+r;
     for i in 0..7 {
         let s = g[i];
         let t = f[i];
-        let mut r=s^t;
-        let c0=1-dd+r;
-        let c1=dd+r;
-        r*=t+s;
         unsafe{core::ptr::write_volatile(&mut f[i],c0*t+c1*s)}  
-        f[i]-=r;
+        f[i]-=r*(t+s);
     }
     return;
 }
@@ -733,17 +732,17 @@ fn modcmv(d: usize, g: &[SPINT], f: &mut [SPINT]) {
 //conditional swap g and f if d=1
 fn modcsw(d: usize, g: &mut [SPINT], f: &mut [SPINT]) {
     let dd=d as SPINT;
+    let r=0x3cc3c33c5aa5a55a;
+    let c0=(1-dd)+r;
+    let c1=dd+r;
     for i in 0..7 {
         let s = g[i];
         let t = f[i];
-        let mut r=s^t;
-        let c0=1-dd+r;
-        let c1=dd+r;
-        r*=t+s;
+        let w=r*(t+s);
         unsafe{core::ptr::write_volatile(&mut f[i],c0*t+c1*s)}  
-        f[i]-=r;
-        unsafe{core::ptr::write_volatile(&mut g[i],c0*s+c1*t)}  
-        g[i]-=r;
+        f[i]-=w;
+        unsafe{core::ptr::write_volatile(&mut g[i],c0*s+c1*t)} 
+        g[i]-=w;
     }
     return;
 }
