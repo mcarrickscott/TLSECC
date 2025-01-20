@@ -1864,7 +1864,7 @@ static int modqr(const spint *h, const spint *x) {
   }
   modmul(r, x, r);
   modnsqr(r, 2);
-  return modis1(r);
+  return modis1(r) | modis0(x);
 }
 
 // conditional move g to f if d=1
