@@ -15,16 +15,15 @@
 /* Note that much of this code is not needed and can be deleted */
 
 
-// Command line : python monty.py 64 ed448
+// Automatically generated modular arithmetic C code
+// Command line : python montyms64.py ed448
+// Python Script by Mike Scott (Technology Innovation Institute, UAE, 2025)
 
 #include <stdint.h>
 #include <stdio.h>
 
 #define sspint int64_t
 #define spint uint64_t
-#define udpint __uint128_t
-#define dpint __uint128_t
-
 #define Wordlength 64
 #define Nlimbs 8
 #define Radix 56
@@ -33,6 +32,84 @@
 
 #define MONTGOMERY
 #define ED448
+
+#include <intrin.h>
+
+// t+=a*b
+static inline void accum(spint *tl, spint *th, spint a, spint b) {
+  unsigned char carry;
+  spint wl, wh;
+  wl = _mulx_u64(a, b, &wh);
+  carry = _addcarryx_u64(0, wl, *tl, tl);
+  _addcarryx_u64(carry, wh, *th, th);
+}
+
+// t+=(a+b)*c
+static inline void accumx(spint *tl, spint *th, spint a, spint bl, spint bh,
+                          spint c) {
+  unsigned char carry;
+  spint wl, wh, l, h;
+  carry = _addcarry_u64(0, a, bl, &l);
+  _addcarry_u64(carry, 0, bh, &h);
+  wl = _mulx_u64(l, c, &wh);
+  wh += h * c;
+  carry = _addcarryx_u64(0, wl, *tl, tl);
+  _addcarryx_u64(carry, wh, *th, th);
+}
+
+// t>>s
+static inline void shiftr(spint *tl, spint *th, char s) {
+  *tl = __shiftright128(*tl, *th, s);
+  *th = (*th >> s);
+}
+
+// t<<s
+static inline void shiftl(spint *tl, spint *th, char s) {
+  *th = __shiftleft128(*tl, *th, s);
+  *tl = (*tl << s);
+}
+
+// t+= (v<<s)
+static inline void accumsl(spint *tl, spint *th, spint v, char s) {
+  unsigned char carry;
+  spint l, h;
+  h = __shiftleft128(v, 0, s);
+  l = (v << s);
+  carry = _addcarry_u64(0, l, *tl, tl);
+  _addcarry_u64(carry, h, *th, th);
+}
+
+// r=t>>s
+static inline spint shiftout(spint tl, spint th, char s) {
+  return __shiftright(tl, th, s);
+}
+
+// t+=s
+static inline void add(spint *tl, spint *th, spint sl, spint sh) {
+  unsigned char carry;
+  carry = _addcarryx_u64(0, *tl, sl, tl);
+  _addcarryx_u64(carry, *th, sh, th);
+}
+
+// t-=s
+static inline void sub(spint *tl, spint *th, spint sl, spint sh) {
+  unsigned char carry;
+  carry = _subborrow_u64(0, *tl, sl, tl);
+  _subborrow_u64(carry, *th, sh, th);
+}
+
+// t=a*b
+static inline void mul(spint *tl, spint *th, spint a, spint b) {
+  *tl = _mulx_u64(a, b, th);
+}
+
+// t*=m
+static inline void muli(spint *tl, spint *th, spint m) {
+  unsigned char carry;
+  spint w;
+  *tl = _mulx_u64(*tl, m, &w);
+  *th = w + (*th) * m;
+}
 
 // propagate carries
 static spint inline prop(spint *n) {
@@ -147,7 +224,7 @@ static void inline modneg(const spint *b, spint *n) {
 // maximum possible = 53255119132055870337481458170721706
 // Modular multiplication, c=a*b mod 2p
 static void inline modmul(const spint *a, const spint *b, spint *c) {
-  dpint t = 0;
+  spint tl = 0, th = 0;
   spint p0 = 0x78c292ab5844f3u;
   spint p1 = 0xc2728dc58f5523u;
   spint p2 = 0x49aed63690216cu;
@@ -155,176 +232,176 @@ static void inline modmul(const spint *a, const spint *b, spint *c) {
   spint q = ((spint)1 << 56u); // q is unsaturated radix
   spint mask = (spint)(q - (spint)1);
   spint ndash = 0xbd440fae918bc5u;
-  t += (dpint)a[0] * b[0];
-  spint v0 = (((spint)t * ndash) & mask);
-  t += (dpint)v0 * (dpint)p0;
-  t >>= 56;
-  t += (dpint)a[0] * b[1];
-  t += (dpint)a[1] * b[0];
-  t += (dpint)v0 * (dpint)p1;
-  spint v1 = (((spint)t * ndash) & mask);
-  t += (dpint)v1 * (dpint)p0;
-  t >>= 56;
-  t += (dpint)a[0] * b[2];
-  t += (dpint)a[1] * b[1];
-  t += (dpint)a[2] * b[0];
-  t += (dpint)v0 * (dpint)p2;
-  t += (dpint)v1 * (dpint)p1;
-  spint v2 = (((spint)t * ndash) & mask);
-  t += (dpint)v2 * (dpint)p0;
-  t >>= 56;
-  t += (dpint)a[0] * b[3];
-  t += (dpint)a[1] * b[2];
-  t += (dpint)a[2] * b[1];
-  t += (dpint)a[3] * b[0];
-  t += (dpint)v0 * (dpint)p3;
-  t += (dpint)v1 * (dpint)p2;
-  t += (dpint)v2 * (dpint)p1;
-  spint v3 = (((spint)t * ndash) & mask);
-  t += (dpint)v3 * (dpint)p0;
-  t >>= 56;
-  t += (dpint)a[0] * b[4];
-  t += (dpint)a[1] * b[3];
-  t += (dpint)a[2] * b[2];
-  t += (dpint)a[3] * b[1];
-  t += (dpint)a[4] * b[0];
-  t += (dpint)(spint)(q - v0);
-  t += (dpint)v1 * (dpint)p3;
-  t += (dpint)v2 * (dpint)p2;
-  t += (dpint)v3 * (dpint)p1;
-  spint v4 = (((spint)t * ndash) & mask);
-  t += (dpint)v4 * (dpint)p0;
-  t >>= 56;
-  t += (dpint)a[0] * b[5];
-  t += (dpint)a[1] * b[4];
-  t += (dpint)a[2] * b[3];
-  t += (dpint)a[3] * b[2];
-  t += (dpint)a[4] * b[1];
-  t += (dpint)a[5] * b[0];
+  accum(&tl, &th, a[0], b[0]);
+  spint v0 = ((tl * ndash) & mask);
+  accum(&tl, &th, v0, p0);
+  shiftr(&tl, &th, 56);
+  accum(&tl, &th, a[0], b[1]);
+  accum(&tl, &th, a[1], b[0]);
+  accum(&tl, &th, v0, p1);
+  spint v1 = ((tl * ndash) & mask);
+  accum(&tl, &th, v1, p0);
+  shiftr(&tl, &th, 56);
+  accum(&tl, &th, a[0], b[2]);
+  accum(&tl, &th, a[1], b[1]);
+  accum(&tl, &th, a[2], b[0]);
+  accum(&tl, &th, v0, p2);
+  accum(&tl, &th, v1, p1);
+  spint v2 = ((tl * ndash) & mask);
+  accum(&tl, &th, v2, p0);
+  shiftr(&tl, &th, 56);
+  accum(&tl, &th, a[0], b[3]);
+  accum(&tl, &th, a[1], b[2]);
+  accum(&tl, &th, a[2], b[1]);
+  accum(&tl, &th, a[3], b[0]);
+  accum(&tl, &th, v0, p3);
+  accum(&tl, &th, v1, p2);
+  accum(&tl, &th, v2, p1);
+  spint v3 = ((tl * ndash) & mask);
+  accum(&tl, &th, v3, p0);
+  shiftr(&tl, &th, 56);
+  accum(&tl, &th, a[0], b[4]);
+  accum(&tl, &th, a[1], b[3]);
+  accum(&tl, &th, a[2], b[2]);
+  accum(&tl, &th, a[3], b[1]);
+  accum(&tl, &th, a[4], b[0]);
+  add(&tl, &th, q - v0, 0);
+  accum(&tl, &th, v1, p3);
+  accum(&tl, &th, v2, p2);
+  accum(&tl, &th, v3, p1);
+  spint v4 = ((tl * ndash) & mask);
+  accum(&tl, &th, v4, p0);
+  shiftr(&tl, &th, 56);
+  accum(&tl, &th, a[0], b[5]);
+  accum(&tl, &th, a[1], b[4]);
+  accum(&tl, &th, a[2], b[3]);
+  accum(&tl, &th, a[3], b[2]);
+  accum(&tl, &th, a[4], b[1]);
+  accum(&tl, &th, a[5], b[0]);
   spint s = (spint)mask;
   s -= v1;
-  t += (dpint)v2 * (dpint)p3;
-  t += (dpint)v3 * (dpint)p2;
-  t += (dpint)v4 * (dpint)p1;
-  t += (dpint)s;
-  spint v5 = (((spint)t * ndash) & mask);
-  t += (dpint)v5 * (dpint)p0;
-  t >>= 56;
-  t += (dpint)a[0] * b[6];
-  t += (dpint)a[1] * b[5];
-  t += (dpint)a[2] * b[4];
-  t += (dpint)a[3] * b[3];
-  t += (dpint)a[4] * b[2];
-  t += (dpint)a[5] * b[1];
-  t += (dpint)a[6] * b[0];
+  accum(&tl, &th, v2, p3);
+  accum(&tl, &th, v3, p2);
+  accum(&tl, &th, v4, p1);
+  add(&tl, &th, s, 0);
+  spint v5 = ((tl * ndash) & mask);
+  accum(&tl, &th, v5, p0);
+  shiftr(&tl, &th, 56);
+  accum(&tl, &th, a[0], b[6]);
+  accum(&tl, &th, a[1], b[5]);
+  accum(&tl, &th, a[2], b[4]);
+  accum(&tl, &th, a[3], b[3]);
+  accum(&tl, &th, a[4], b[2]);
+  accum(&tl, &th, a[5], b[1]);
+  accum(&tl, &th, a[6], b[0]);
   s = (spint)mask;
   s -= v2;
-  t += (dpint)v3 * (dpint)p3;
-  t += (dpint)v4 * (dpint)p2;
-  t += (dpint)v5 * (dpint)p1;
-  t += (dpint)s;
-  spint v6 = (((spint)t * ndash) & mask);
-  t += (dpint)v6 * (dpint)p0;
-  t >>= 56;
-  t += (dpint)a[0] * b[7];
-  t += (dpint)a[1] * b[6];
-  t += (dpint)a[2] * b[5];
-  t += (dpint)a[3] * b[4];
-  t += (dpint)a[4] * b[3];
-  t += (dpint)a[5] * b[2];
-  t += (dpint)a[6] * b[1];
-  t += (dpint)a[7] * b[0];
+  accum(&tl, &th, v3, p3);
+  accum(&tl, &th, v4, p2);
+  accum(&tl, &th, v5, p1);
+  add(&tl, &th, s, 0);
+  spint v6 = ((tl * ndash) & mask);
+  accum(&tl, &th, v6, p0);
+  shiftr(&tl, &th, 56);
+  accum(&tl, &th, a[0], b[7]);
+  accum(&tl, &th, a[1], b[6]);
+  accum(&tl, &th, a[2], b[5]);
+  accum(&tl, &th, a[3], b[4]);
+  accum(&tl, &th, a[4], b[3]);
+  accum(&tl, &th, a[5], b[2]);
+  accum(&tl, &th, a[6], b[1]);
+  accum(&tl, &th, a[7], b[0]);
   s = (spint)mask;
-  t += (dpint)(udpint)((udpint)v0 << 54u);
+  accumsl(&tl, &th, v0, 54u);
   s -= v3;
-  t += (dpint)v4 * (dpint)p3;
-  t += (dpint)v5 * (dpint)p2;
-  t += (dpint)v6 * (dpint)p1;
-  t += (dpint)s;
-  spint v7 = (((spint)t * ndash) & mask);
-  t += (dpint)v7 * (dpint)p0;
-  t >>= 56;
-  t += (dpint)a[1] * b[7];
-  t += (dpint)a[2] * b[6];
-  t += (dpint)a[3] * b[5];
-  t += (dpint)a[4] * b[4];
-  t += (dpint)a[5] * b[3];
-  t += (dpint)a[6] * b[2];
-  t += (dpint)a[7] * b[1];
+  accum(&tl, &th, v4, p3);
+  accum(&tl, &th, v5, p2);
+  accum(&tl, &th, v6, p1);
+  add(&tl, &th, s, 0);
+  spint v7 = ((tl * ndash) & mask);
+  accum(&tl, &th, v7, p0);
+  shiftr(&tl, &th, 56);
+  accum(&tl, &th, a[1], b[7]);
+  accum(&tl, &th, a[2], b[6]);
+  accum(&tl, &th, a[3], b[5]);
+  accum(&tl, &th, a[4], b[4]);
+  accum(&tl, &th, a[5], b[3]);
+  accum(&tl, &th, a[6], b[2]);
+  accum(&tl, &th, a[7], b[1]);
   s = (spint)mask;
-  t += (dpint)(udpint)((udpint)v1 << 54u);
+  accumsl(&tl, &th, v1, 54u);
   s -= v4;
-  t += (dpint)v5 * (dpint)p3;
-  t += (dpint)v6 * (dpint)p2;
-  t += (dpint)v7 * (dpint)p1;
-  t += (dpint)s;
-  c[0] = ((spint)t & mask);
-  t >>= 56;
-  t += (dpint)a[2] * b[7];
-  t += (dpint)a[3] * b[6];
-  t += (dpint)a[4] * b[5];
-  t += (dpint)a[5] * b[4];
-  t += (dpint)a[6] * b[3];
-  t += (dpint)a[7] * b[2];
+  accum(&tl, &th, v5, p3);
+  accum(&tl, &th, v6, p2);
+  accum(&tl, &th, v7, p1);
+  add(&tl, &th, s, 0);
+  c[0] = (tl & mask);
+  shiftr(&tl, &th, 56);
+  accum(&tl, &th, a[2], b[7]);
+  accum(&tl, &th, a[3], b[6]);
+  accum(&tl, &th, a[4], b[5]);
+  accum(&tl, &th, a[5], b[4]);
+  accum(&tl, &th, a[6], b[3]);
+  accum(&tl, &th, a[7], b[2]);
   s = (spint)mask;
-  t += (dpint)(udpint)((udpint)v2 << 54u);
+  accumsl(&tl, &th, v2, 54u);
   s -= v5;
-  t += (dpint)v6 * (dpint)p3;
-  t += (dpint)v7 * (dpint)p2;
-  t += (dpint)s;
-  c[1] = ((spint)t & mask);
-  t >>= 56;
-  t += (dpint)a[3] * b[7];
-  t += (dpint)a[4] * b[6];
-  t += (dpint)a[5] * b[5];
-  t += (dpint)a[6] * b[4];
-  t += (dpint)a[7] * b[3];
+  accum(&tl, &th, v6, p3);
+  accum(&tl, &th, v7, p2);
+  add(&tl, &th, s, 0);
+  c[1] = (tl & mask);
+  shiftr(&tl, &th, 56);
+  accum(&tl, &th, a[3], b[7]);
+  accum(&tl, &th, a[4], b[6]);
+  accum(&tl, &th, a[5], b[5]);
+  accum(&tl, &th, a[6], b[4]);
+  accum(&tl, &th, a[7], b[3]);
   s = (spint)mask;
-  t += (dpint)(udpint)((udpint)v3 << 54u);
+  accumsl(&tl, &th, v3, 54u);
   s -= v6;
-  t += (dpint)v7 * (dpint)p3;
-  t += (dpint)s;
-  c[2] = ((spint)t & mask);
-  t >>= 56;
-  t += (dpint)a[4] * b[7];
-  t += (dpint)a[5] * b[6];
-  t += (dpint)a[6] * b[5];
-  t += (dpint)a[7] * b[4];
+  accum(&tl, &th, v7, p3);
+  add(&tl, &th, s, 0);
+  c[2] = (tl & mask);
+  shiftr(&tl, &th, 56);
+  accum(&tl, &th, a[4], b[7]);
+  accum(&tl, &th, a[5], b[6]);
+  accum(&tl, &th, a[6], b[5]);
+  accum(&tl, &th, a[7], b[4]);
   s = (spint)mask;
-  t += (dpint)(udpint)((udpint)v4 << 54u);
+  accumsl(&tl, &th, v4, 54u);
   s -= v7;
-  t += (dpint)s;
-  c[3] = ((spint)t & mask);
-  t >>= 56;
-  t += (dpint)a[5] * b[7];
-  t += (dpint)a[6] * b[6];
-  t += (dpint)a[7] * b[5];
+  add(&tl, &th, s, 0);
+  c[3] = (tl & mask);
+  shiftr(&tl, &th, 56);
+  accum(&tl, &th, a[5], b[7]);
+  accum(&tl, &th, a[6], b[6]);
+  accum(&tl, &th, a[7], b[5]);
   s = (spint)mask;
-  t += (dpint)(udpint)((udpint)v5 << 54u);
-  t += (dpint)s;
-  c[4] = ((spint)t & mask);
-  t >>= 56;
-  t += (dpint)a[6] * b[7];
-  t += (dpint)a[7] * b[6];
+  accumsl(&tl, &th, v5, 54u);
+  add(&tl, &th, s, 0);
+  c[4] = (tl & mask);
+  shiftr(&tl, &th, 56);
+  accum(&tl, &th, a[6], b[7]);
+  accum(&tl, &th, a[7], b[6]);
   s = (spint)mask;
-  t += (dpint)(udpint)((udpint)v6 << 54u);
-  t += (dpint)s;
-  c[5] = ((spint)t & mask);
-  t >>= 56;
-  t += (dpint)a[7] * b[7];
+  accumsl(&tl, &th, v6, 54u);
+  add(&tl, &th, s, 0);
+  c[5] = (tl & mask);
+  shiftr(&tl, &th, 56);
+  accum(&tl, &th, a[7], b[7]);
   s = (spint)mask;
-  t += (dpint)(udpint)((udpint)v7 << 54u);
-  t += (dpint)s;
-  c[6] = ((spint)t & mask);
-  t >>= 56;
-  t -= (dpint)1u;
-  c[7] = (spint)t;
+  accumsl(&tl, &th, v7, 54u);
+  add(&tl, &th, s, 0);
+  c[6] = (tl & mask);
+  shiftr(&tl, &th, 56);
+  sub(&tl, &th, 1u, 0);
+  c[7] = tl;
 }
 
 // Modular squaring, c=a*a  mod 2p
 static void inline modsqr(const spint *a, spint *c) {
-  udpint tot;
-  udpint t = 0;
+  spint totl, toth;
+  spint tl = 0, th = 0;
   spint p0 = 0x78c292ab5844f3u;
   spint p1 = 0xc2728dc58f5523u;
   spint p2 = 0x49aed63690216cu;
@@ -332,170 +409,171 @@ static void inline modsqr(const spint *a, spint *c) {
   spint q = ((spint)1 << 56u); // q is unsaturated radix
   spint mask = (spint)(q - (spint)1);
   spint ndash = 0xbd440fae918bc5u;
-  tot = (udpint)a[0] * a[0];
-  t = tot;
-  spint v0 = (((spint)t * ndash) & mask);
-  t += (udpint)v0 * p0;
-  t >>= 56;
-  tot = (udpint)a[0] * a[1];
-  tot *= 2;
-  t += tot;
-  t += (udpint)v0 * p1;
-  spint v1 = (((spint)t * ndash) & mask);
-  t += (udpint)v1 * p0;
-  t >>= 56;
-  tot = (udpint)a[0] * a[2];
-  tot *= 2;
-  tot += (udpint)a[1] * a[1];
-  t += tot;
-  t += (udpint)v0 * p2;
-  t += (udpint)v1 * p1;
-  spint v2 = (((spint)t * ndash) & mask);
-  t += (udpint)v2 * p0;
-  t >>= 56;
-  tot = (udpint)a[0] * a[3];
-  tot += (udpint)a[1] * a[2];
-  tot *= 2;
-  t += tot;
-  t += (udpint)v0 * p3;
-  t += (udpint)v1 * p2;
-  t += (udpint)v2 * p1;
-  spint v3 = (((spint)t * ndash) & mask);
-  t += (udpint)v3 * p0;
-  t >>= 56;
-  tot = (udpint)a[0] * a[4];
-  tot += (udpint)a[1] * a[3];
-  tot *= 2;
-  tot += (udpint)a[2] * a[2];
-  t += tot;
-  t += (udpint)(spint)(q - v0);
-  t += (udpint)v1 * p3;
-  t += (udpint)v2 * p2;
-  t += (udpint)v3 * p1;
-  spint v4 = (((spint)t * ndash) & mask);
-  t += (udpint)v4 * p0;
-  t >>= 56;
-  tot = (udpint)a[0] * a[5];
-  tot += (udpint)a[1] * a[4];
-  tot += (udpint)a[2] * a[3];
-  tot *= 2;
-  t += tot;
+  mul(&totl, &toth, a[0], a[0]);
+  tl = totl;
+  th = toth;
+  spint v0 = ((tl * ndash) & mask);
+  accum(&tl, &th, v0, p0);
+  shiftr(&tl, &th, 56);
+  mul(&totl, &toth, a[0], a[1]);
+  add(&totl, &toth, totl, toth);
+  add(&tl, &th, totl, toth);
+  accum(&tl, &th, v0, p1);
+  spint v1 = ((tl * ndash) & mask);
+  accum(&tl, &th, v1, p0);
+  shiftr(&tl, &th, 56);
+  mul(&totl, &toth, a[0], a[2]);
+  add(&totl, &toth, totl, toth);
+  accum(&totl, &toth, a[1], a[1]);
+  add(&tl, &th, totl, toth);
+  accum(&tl, &th, v0, p2);
+  accum(&tl, &th, v1, p1);
+  spint v2 = ((tl * ndash) & mask);
+  accum(&tl, &th, v2, p0);
+  shiftr(&tl, &th, 56);
+  mul(&totl, &toth, a[0], a[3]);
+  accum(&totl, &toth, a[1], a[2]);
+  add(&totl, &toth, totl, toth);
+  add(&tl, &th, totl, toth);
+  accum(&tl, &th, v0, p3);
+  accum(&tl, &th, v1, p2);
+  accum(&tl, &th, v2, p1);
+  spint v3 = ((tl * ndash) & mask);
+  accum(&tl, &th, v3, p0);
+  shiftr(&tl, &th, 56);
+  mul(&totl, &toth, a[0], a[4]);
+  accum(&totl, &toth, a[1], a[3]);
+  add(&totl, &toth, totl, toth);
+  accum(&totl, &toth, a[2], a[2]);
+  add(&tl, &th, totl, toth);
+  add(&tl, &th, q - v0, 0);
+  accum(&tl, &th, v1, p3);
+  accum(&tl, &th, v2, p2);
+  accum(&tl, &th, v3, p1);
+  spint v4 = ((tl * ndash) & mask);
+  accum(&tl, &th, v4, p0);
+  shiftr(&tl, &th, 56);
+  mul(&totl, &toth, a[0], a[5]);
+  accum(&totl, &toth, a[1], a[4]);
+  accum(&totl, &toth, a[2], a[3]);
+  add(&totl, &toth, totl, toth);
+  add(&tl, &th, totl, toth);
   spint s = (spint)mask;
   s -= v1;
-  t += (udpint)v2 * p3;
-  t += (udpint)v3 * p2;
-  t += (udpint)v4 * p1;
-  t += (udpint)s;
-  spint v5 = (((spint)t * ndash) & mask);
-  t += (udpint)v5 * p0;
-  t >>= 56;
-  tot = (udpint)a[0] * a[6];
-  tot += (udpint)a[1] * a[5];
-  tot += (udpint)a[2] * a[4];
-  tot *= 2;
-  tot += (udpint)a[3] * a[3];
-  t += tot;
+  accum(&tl, &th, v2, p3);
+  accum(&tl, &th, v3, p2);
+  accum(&tl, &th, v4, p1);
+  add(&tl, &th, s, 0);
+  spint v5 = ((tl * ndash) & mask);
+  accum(&tl, &th, v5, p0);
+  shiftr(&tl, &th, 56);
+  mul(&totl, &toth, a[0], a[6]);
+  accum(&totl, &toth, a[1], a[5]);
+  accum(&totl, &toth, a[2], a[4]);
+  add(&totl, &toth, totl, toth);
+  accum(&totl, &toth, a[3], a[3]);
+  add(&tl, &th, totl, toth);
   s = (spint)mask;
   s -= v2;
-  t += (udpint)v3 * p3;
-  t += (udpint)v4 * p2;
-  t += (udpint)v5 * p1;
-  t += (udpint)s;
-  spint v6 = (((spint)t * ndash) & mask);
-  t += (udpint)v6 * p0;
-  t >>= 56;
-  tot = (udpint)a[0] * a[7];
-  tot += (udpint)a[1] * a[6];
-  tot += (udpint)a[2] * a[5];
-  tot += (udpint)a[3] * a[4];
-  tot *= 2;
-  t += tot;
+  accum(&tl, &th, v3, p3);
+  accum(&tl, &th, v4, p2);
+  accum(&tl, &th, v5, p1);
+  add(&tl, &th, s, 0);
+  spint v6 = ((tl * ndash) & mask);
+  accum(&tl, &th, v6, p0);
+  shiftr(&tl, &th, 56);
+  mul(&totl, &toth, a[0], a[7]);
+  accum(&totl, &toth, a[1], a[6]);
+  accum(&totl, &toth, a[2], a[5]);
+  accum(&totl, &toth, a[3], a[4]);
+  add(&totl, &toth, totl, toth);
+  add(&tl, &th, totl, toth);
   s = (spint)mask;
-  t += (udpint)v0 << 54u;
+  accumsl(&tl, &th, v0, 54u);
   s -= v3;
-  t += (udpint)v4 * p3;
-  t += (udpint)v5 * p2;
-  t += (udpint)v6 * p1;
-  t += (udpint)s;
-  spint v7 = (((spint)t * ndash) & mask);
-  t += (udpint)v7 * p0;
-  t >>= 56;
-  tot = (udpint)a[1] * a[7];
-  tot += (udpint)a[2] * a[6];
-  tot += (udpint)a[3] * a[5];
-  tot *= 2;
-  tot += (udpint)a[4] * a[4];
-  t += tot;
+  accum(&tl, &th, v4, p3);
+  accum(&tl, &th, v5, p2);
+  accum(&tl, &th, v6, p1);
+  add(&tl, &th, s, 0);
+  spint v7 = ((tl * ndash) & mask);
+  accum(&tl, &th, v7, p0);
+  shiftr(&tl, &th, 56);
+  mul(&totl, &toth, a[1], a[7]);
+  accum(&totl, &toth, a[2], a[6]);
+  accum(&totl, &toth, a[3], a[5]);
+  add(&totl, &toth, totl, toth);
+  accum(&totl, &toth, a[4], a[4]);
+  add(&tl, &th, totl, toth);
   s = (spint)mask;
-  t += (udpint)v1 << 54u;
+  accumsl(&tl, &th, v1, 54u);
   s -= v4;
-  t += (udpint)v5 * p3;
-  t += (udpint)v6 * p2;
-  t += (udpint)v7 * p1;
-  t += (udpint)s;
-  c[0] = ((spint)t & mask);
-  t >>= 56;
-  tot = (udpint)a[2] * a[7];
-  tot += (udpint)a[3] * a[6];
-  tot += (udpint)a[4] * a[5];
-  tot *= 2;
-  t += tot;
+  accum(&tl, &th, v5, p3);
+  accum(&tl, &th, v6, p2);
+  accum(&tl, &th, v7, p1);
+  add(&tl, &th, s, 0);
+  c[0] = (tl & mask);
+  shiftr(&tl, &th, 56);
+  mul(&totl, &toth, a[2], a[7]);
+  accum(&totl, &toth, a[3], a[6]);
+  accum(&totl, &toth, a[4], a[5]);
+  add(&totl, &toth, totl, toth);
+  add(&tl, &th, totl, toth);
   s = (spint)mask;
-  t += (udpint)v2 << 54u;
+  accumsl(&tl, &th, v2, 54u);
   s -= v5;
-  t += (udpint)v6 * p3;
-  t += (udpint)v7 * p2;
-  t += (udpint)s;
-  c[1] = ((spint)t & mask);
-  t >>= 56;
-  tot = (udpint)a[3] * a[7];
-  tot += (udpint)a[4] * a[6];
-  tot *= 2;
-  tot += (udpint)a[5] * a[5];
-  t += tot;
+  accum(&tl, &th, v6, p3);
+  accum(&tl, &th, v7, p2);
+  add(&tl, &th, s, 0);
+  c[1] = (tl & mask);
+  shiftr(&tl, &th, 56);
+  mul(&totl, &toth, a[3], a[7]);
+  accum(&totl, &toth, a[4], a[6]);
+  add(&totl, &toth, totl, toth);
+  accum(&totl, &toth, a[5], a[5]);
+  add(&tl, &th, totl, toth);
   s = (spint)mask;
-  t += (udpint)v3 << 54u;
+  accumsl(&tl, &th, v3, 54u);
   s -= v6;
-  t += (udpint)v7 * p3;
-  t += (udpint)s;
-  c[2] = ((spint)t & mask);
-  t >>= 56;
-  tot = (udpint)a[4] * a[7];
-  tot += (udpint)a[5] * a[6];
-  tot *= 2;
-  t += tot;
+  accum(&tl, &th, v7, p3);
+  add(&tl, &th, s, 0);
+  c[2] = (tl & mask);
+  shiftr(&tl, &th, 56);
+  mul(&totl, &toth, a[4], a[7]);
+  accum(&totl, &toth, a[5], a[6]);
+  add(&totl, &toth, totl, toth);
+  add(&tl, &th, totl, toth);
   s = (spint)mask;
-  t += (udpint)v4 << 54u;
+  accumsl(&tl, &th, v4, 54u);
   s -= v7;
-  t += (udpint)s;
-  c[3] = ((spint)t & mask);
-  t >>= 56;
-  tot = (udpint)a[5] * a[7];
-  tot *= 2;
-  tot += (udpint)a[6] * a[6];
-  t += tot;
+  add(&tl, &th, s, 0);
+  c[3] = (tl & mask);
+  shiftr(&tl, &th, 56);
+  mul(&totl, &toth, a[5], a[7]);
+  add(&totl, &toth, totl, toth);
+  accum(&totl, &toth, a[6], a[6]);
+  add(&tl, &th, totl, toth);
   s = (spint)mask;
-  t += (udpint)v5 << 54u;
-  t += (udpint)s;
-  c[4] = ((spint)t & mask);
-  t >>= 56;
-  tot = (udpint)a[6] * a[7];
-  tot *= 2;
-  t += tot;
+  accumsl(&tl, &th, v5, 54u);
+  add(&tl, &th, s, 0);
+  c[4] = (tl & mask);
+  shiftr(&tl, &th, 56);
+  mul(&totl, &toth, a[6], a[7]);
+  add(&totl, &toth, totl, toth);
+  add(&tl, &th, totl, toth);
   s = (spint)mask;
-  t += (udpint)v6 << 54u;
-  t += (udpint)s;
-  c[5] = ((spint)t & mask);
-  t >>= 56;
-  tot = (udpint)a[7] * a[7];
-  t += tot;
+  accumsl(&tl, &th, v6, 54u);
+  add(&tl, &th, s, 0);
+  c[5] = (tl & mask);
+  shiftr(&tl, &th, 56);
+  mul(&totl, &toth, a[7], a[7]);
+  add(&tl, &th, totl, toth);
   s = (spint)mask;
-  t += (udpint)v7 << 54u;
-  t += (udpint)s;
-  c[6] = ((spint)t & mask);
-  t >>= 56;
-  t -= 1u;
-  c[7] = (spint)t;
+  accumsl(&tl, &th, v7, 54u);
+  add(&tl, &th, s, 0);
+  c[6] = (tl & mask);
+  shiftr(&tl, &th, 56);
+  sub(&tl, &th, 1u, 0);
+  c[7] = tl;
 }
 
 // copy
@@ -685,19 +763,6 @@ static void redc(const spint *n, spint *m) {
   (void)modfsb(m);
 }
 
-// reduce double length input to n-residue
-static void modred(const spint *n, spint *b) {
-  int i;
-  spint t[8];
-  for (i = 0; i < 8; i++) {
-    b[i] = n[i];
-    t[i] = n[i + 8];
-  }
-  nres(t, t);
-  modadd(b, t, b);
-  nres(b, b);
-}
-
 // is unity?
 static int modis1(const spint *a) {
   int i;
@@ -753,6 +818,13 @@ static void modint(int x, spint *a) {
   nres(a, a);
 }
 
+// Modular multiplication by an integer, c=a*b mod 2p
+static void inline modmli(const spint *a, int b, spint *c) {
+  spint t[8];
+  modint(b, t);
+  modmul(a, t, c);
+}
+
 // Test for quadratic residue
 static int modqr(const spint *h, const spint *x) {
   spint r[8];
@@ -767,33 +839,37 @@ static int modqr(const spint *h, const spint *x) {
 }
 
 // conditional move g to f if d=1
-static void modcmv(int d, const spint *g, volatile spint *f) {
+// strongly recommend inlining be disabled using compiler specific syntax
+static void modcmv(int b, const spint *g, volatile spint *f) {
   int i;
-  spint c0,c1,s,t;
-  spint r=0x3cc3c33c5aa5a55a;
-  c0=(~d)&(r+1);
-  c1=d|r;
+  spint c0, c1, s, t, aux;
+  spint r = 0x3cc3c33c5aa5a55au;
+  c0 = (~b) & (r + 1);
+  c1 = b + r;
   for (i = 0; i < 8; i++) {
-      s=g[i]; t=f[i];
-      f[i] =c0*t+c1*s;
-      f[i]-=r*(t+s); 
+    s = g[i];
+    t = f[i];
+    f[i] = aux = c0 * t + c1 * s;
+    f[i] = aux - r * (t + s);
   }
 }
 
 // conditional swap g and f if d=1
-static void modcsw(int d, volatile spint *g, volatile spint *f) {
+// strongly recommend inlining be disabled using compiler specific syntax
+static void modcsw(int b, volatile spint *g, volatile spint *f) {
   int i;
-  spint c0,c1,s,t,w;
-  spint r=0x3cc3c33c5aa5a55a;
-  c0=(~d)&(r+1);
-  c1=d|r;
+  spint c0, c1, s, t, w, aux;
+  spint r = 0x3cc3c33c5aa5a55au;
+  c0 = (~b) & (r + 1);
+  c1 = b + r;
   for (i = 0; i < 8; i++) {
-      s=g[i]; t=f[i];
-      w=r*(t+s);
-      f[i] =c0*t+c1*s;
-      f[i]-=w;  
-      g[i] =c0*s+c1*t;
-      g[i]-=w;   
+    s = g[i];
+    t = f[i];
+    w = r * (t + s);
+    f[i] = aux = c0 * t + c1 * s;
+    f[i] = aux - w;
+    g[i] = aux = c0 * s + c1 * t;
+    g[i] = aux - w;
   }
 }
 
@@ -907,6 +983,59 @@ static void reverse(char *buff) {
     } 
 }
 
+static int char2int(char input)
+{
+    if ((input >= '0') && (input <= '9'))
+        return input - '0';
+    if ((input >= 'A') && (input <= 'F'))
+        return input - 'A' + 10;
+    if ((input >= 'a') && (input <= 'f'))
+        return input - 'a' + 10;
+    return 0;
+}
+
+// Convert from a hex string to byte array 
+static void fromHex(int ilen, const char *src, char *dst)
+{
+    int i,lz,len=0;
+    char pad[128];
+    while (src[len]!=0) len++;
+    lz=2*ilen-len;
+    if (lz<0) lz=0;
+    for (i=0;i<lz;i++) pad[i]='0';  // pad with leading zeros
+    for (i=lz;i<2*ilen;i++) pad[i]=src[i-lz];
+
+    for (i=0;i<ilen;i++)
+    {
+        dst[i] = (char2int(pad[2*i]) * 16) + char2int(pad[2*i + 1]);
+    }
+}
+
+static void byte2hex(char *ptr,unsigned char ch)
+{
+    int t=ch/16;
+    int b=ch%16;
+    if (t<10)
+    	ptr[0]='0'+t;
+    else
+    	ptr[0]='a'+(t-10);
+    if (b<10)
+    	ptr[1]='0'+b;
+    else
+    	ptr[1]='a'+(b-10);    	
+}
+
+// Convert a byte array to a hex string 
+static void toHex(int len, const char *src, char *dst)
+{
+    int i;
+    for (i = 0; i < len; i++)
+    {
+        unsigned char ch = src[i];
+        byte2hex(&dst[i * 2],ch);
+    }
+    dst[2*len]='\0';
+}
 
 // I/O debug code
 // output a modulo number in hex
@@ -1072,6 +1201,8 @@ void ED448_SIGN(char *prv,char *pub,int mlen,char *m,char *sig)
     sig[2*BYTES+1]=0;           // second part of signature
 }
 
+// input public key, message and signature
+// NOTE signatures that are of the wrong length should be rejected prior to calling this function
 int ED448_VERIFY(char *pub,int mlen,char *m,char *sig) 
 {
     int i;
