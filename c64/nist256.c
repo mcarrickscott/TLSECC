@@ -430,12 +430,12 @@ static int modqr(const spint *h, const spint *x) {
 }
 
 // conditional move g to f if d=1
-static int modcmv(int d, const spint *g, volatile spint *f) {
+static void modcmv(int d, const spint *g, volatile spint *f) {
   int i;
   spint c0,c1,s,t;
   spint r=0x3cc3c33c5aa5a55a;
   c0=(~d)&(r+1);
-  c1=d|r;
+  c1=d+r;
   for (i = 0; i < 5; i++) {
       s=g[i]; t=f[i];
       f[i] =c0*t+c1*s;
@@ -449,7 +449,7 @@ static void modcsw(int d, volatile spint *g, volatile spint *f) {
   spint c0,c1,s,t,w;
   spint r=0x3cc3c33c5aa5a55a;
   c0=(~d)&(r+1);
-  c1=d|r;
+  c1=d+r;
   for (i = 0; i < 5; i++) {
       s=g[i]; t=f[i];
       w=r*(t+s);
@@ -980,7 +980,7 @@ static void select(int b,point W[],point *P)
 }
 
 // convert to double naf form
-static void dnaf(const char *e,const char *f, char *w)
+static void dnaf(const char *e,const char *f, signed char *w)
 {
     int i,j,t;
     unsigned char ce=0;
@@ -1073,7 +1073,7 @@ void ecn256mul2(const char *e,point *P,const char *f,point *Q,point *R)
     ecn256cpy(Q,&W[2]); ecn256sub(P,&W[2]);  // Q-P
     ecn256cpy(Q,&W[4]); ecn256add(P,&W[4]);  // Q+P
 
-    dnaf(e,f,(char *)w);
+    dnaf(e,f,w);
 
     i=8*Nbytes+7;
     while (w[i]==0) i--; // ignore leading zeros

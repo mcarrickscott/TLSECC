@@ -1873,7 +1873,7 @@ static void modcmv(int d, const spint *g, volatile spint *f) {
   spint c0,c1,s,t;
   spint r=0x5aa5a55a;
   c0=(~d)&(r+1);
-  c1=d|r;
+  c1=d+r;
   for (i = 0; i < 19; i++) {
       s=g[i]; t=f[i];
       f[i] =c0*t+c1*s;
@@ -1887,7 +1887,7 @@ static void modcsw(int d, volatile spint *g, volatile spint *f) {
   spint c0,c1,s,t,w;
   spint r=0x5aa5a55a;
   c0=(~d)&(r+1);
-  c1=d|r;
+  c1=d+r;
   for (i = 0; i < 19; i++) {
       s=g[i]; t=f[i];
       w=r*(t+s);

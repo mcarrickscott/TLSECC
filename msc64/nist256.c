@@ -1070,7 +1070,7 @@ static void select(int b,point W[],point *P)
 }
 
 // convert to double naf form
-static void dnaf(const char *e,const char *f, char *w)
+static void dnaf(const char *e,const char *f, signed char *w)
 {
     int i,j,t;
     unsigned char ce=0;
@@ -1163,7 +1163,7 @@ void ecn256mul2(const char *e,point *P,const char *f,point *Q,point *R)
     ecn256cpy(Q,&W[2]); ecn256sub(P,&W[2]);  // Q-P
     ecn256cpy(Q,&W[4]); ecn256add(P,&W[4]);  // Q+P
 
-    dnaf(e,f,(char *)w);
+    dnaf(e,f,w);
 
     i=8*Nbytes+7;
     while (w[i]==0) i--; // ignore leading zeros
