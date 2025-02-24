@@ -18,11 +18,13 @@ To run a test program copy from the *test* directory into the working directory 
 	gcc -O2 tests256.c tlsecc.a -o tests256
 
 
-If using the Microsoft C 64-bit compiler (no 128-bit integers!), copy instead from *msc64*, then
+If using the Microsoft C 64-bit compiler for x86-64 (no 128-bit integers -- you really should be using clang-cl), copy instead from *msc64*, then
 
 	cl /c /O2 *.c
 	lib /OUT:tlsecc.lib *.obj
 	cl /O2 tests256.c tlsecc.lib
+
+The C files in *msc64* can be easily edited to support other 64-bit architectures like ARM64.
 
 
 For a 64-bit Rust build, first create a library

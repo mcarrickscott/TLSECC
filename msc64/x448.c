@@ -26,6 +26,90 @@
 #define MULBYINT
 #include <intrin.h>
 
+#define ARCH_X86_64 // remove for other architectures like ARM64 - Note umulh() intrinsic is still required
+#ifndef ARCH_X86_64
+
+// t+=a*b
+static inline void accum(spint *tl, spint *th, spint a, spint b) {
+  spint wl, wh;
+  wl=a*b;
+  wh=__umulh(a,b);
+  *tl+=wl;
+  *th+=(*tl<wl);
+  *th+=wh;
+}
+
+// t+=(a+b)*c
+static inline void accumx(spint *tl, spint *th, spint a, spint bl, spint bh,
+                          spint c) {
+  spint wl, wh, l, h;
+  l=a;
+  l+=bl;
+  h=bh+(l<bl);
+  wl=l*c;
+  wh=__umulh(l,c)+h*c;
+  *tl+=wl;
+  *th+=(*tl<wl);
+  *th+=wh;
+}
+
+// t>>s
+static  inline void shiftr(spint *tl, spint *th, char s) {
+  *tl=((*tl)>>s)|((*th)<<(64-s));
+  *th=(*th)>>s;
+}
+
+// t<<s
+static  inline void shiftl(spint *tl, spint *th, char s) {
+  *th = ((*th)<<s)|((*tl)>>(64-s));
+  *tl = (*tl) << s;
+}
+
+// t+= (v<<s)
+static  inline void accumsl(spint *tl, spint *th, spint v, char s) {
+  spint wl, wh;
+  wh = v>>(64-s);
+  wl = v << s;        
+  *tl+=wl;
+  *th+=(*tl<wl);
+  *th+=wh;
+}
+
+// r=t>>s
+static  inline spint shiftout(spint tl, spint th, char s) {
+  return (tl>>s)|(th<<(64-s));
+}
+
+// t+=s
+static  inline void add(spint *tl, spint *th, spint sl, spint sh) {
+  *tl+=sl;
+  *th+=(*tl<sl);
+  *th+=sh;
+}
+
+// t-=s
+static  inline void sub(spint *tl, spint *th, spint sl, spint sh) {
+  spint l=*tl;
+  *tl-=sl;
+  *th-=((*tl)>l);
+  *th-=sh;
+}
+
+// t=a*b
+static  inline void mul(spint *tl, spint *th, spint a, spint b) {
+  *tl=a*b;
+  *th=__umulh(a,b);
+}
+
+// t*=m
+static  inline void muli(spint *tl, spint *th, spint m) {
+  spint w=__umulh(*tl,m);
+  *tl = *tl*m;
+  *th = w + (*th) * m;
+}
+
+
+#else
 // t+=a*b
 static inline void accum(spint *tl, spint *th, spint a, spint b) {
   unsigned char carry;
@@ -101,6 +185,8 @@ static inline void muli(spint *tl, spint *th, spint m) {
   *tl = _mulx_u64(*tl, m, &w);
   *th = w + (*th) * m;
 }
+
+#endif
 
 // propagate carries
 static spint inline prop(spint *n) {
