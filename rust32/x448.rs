@@ -1122,11 +1122,12 @@ fn modqr(h: Option<&[SPINT]>, x: &[SPINT]) -> bool {
 }
 
 //conditional move g to f if d=1
+#[inline(never)]
 fn modcmv(d: usize, g: &[SPINT], f: &mut [SPINT]) {
     let dd=d as SPINT;
     let r=0x5aa5a55a;
     let c0=(!dd)&(r+1);
-    let c1=dd|r;
+    let c1=dd+r;
     for i in 0..16 {
         let s = g[i];
         let t = f[i];
@@ -1136,11 +1137,12 @@ fn modcmv(d: usize, g: &[SPINT], f: &mut [SPINT]) {
 }
 
 //conditional swap g and f if d=1
+#[inline(never)]
 fn modcsw(d: usize, g: &mut [SPINT], f: &mut [SPINT]) {
     let dd=d as SPINT;
     let r=0x5aa5a55a;
     let c0=(!dd)&(r+1);
-    let c1=dd|r;
+    let c1=dd+r;
     for i in 0..16 {
         let s = g[i];
         let t = f[i];
