@@ -407,7 +407,12 @@ fn modqr(h: Option<&[SPINT]>, x: &[SPINT]) -> bool {
 #[inline(never)]
 fn modcmv(d: usize, g: &[SPINT], f: &mut [SPINT]) {
     let dd=d as SPINT;
-    let r=0x3cc3c33c5aa5a55a;
+    static mut R:SPINT=0;
+    let r:SPINT;
+    unsafe {
+        R+=0x3cc3c33c5aa5a55a;
+        r=R;
+    }
     let c0=(!dd)&(r+1);
     let c1=dd+r;
     for i in 0..5 {
@@ -423,7 +428,12 @@ fn modcmv(d: usize, g: &[SPINT], f: &mut [SPINT]) {
 #[inline(never)]
 fn modcsw(d: usize, g: &mut [SPINT], f: &mut [SPINT]) {
     let dd=d as SPINT;
-    let r=0x3cc3c33c5aa5a55a;
+    static mut R:SPINT=0;
+    let r:SPINT;
+    unsafe {
+        R+=0x3cc3c33c5aa5a55a;
+        r=R;
+    }
     let c0=(!dd)&(r+1);
     let c1=dd+r;
     for i in 0..5 {

@@ -1023,8 +1023,10 @@ static int modqr(const spint *h, const spint *x) {
 // strongly recommend inlining be disabled using compiler specific syntax
 static void modcmv(int b, const spint *g, volatile spint *f) {
   int i;
-  spint c0, c1, s, t, aux;
-  spint r = 0x3cc3c33c5aa5a55au;
+  spint c0, c1, s, t, r, aux;
+  static spint R=0;
+  R+=0x3cc3c33c5aa5a55a;
+  r=R;
   c0 = (~b) & (r + 1);
   c1 = b + r;
   for (i = 0; i < 9; i++) {
@@ -1039,8 +1041,10 @@ static void modcmv(int b, const spint *g, volatile spint *f) {
 // strongly recommend inlining be disabled using compiler specific syntax
 static void modcsw(int b, volatile spint *g, volatile spint *f) {
   int i;
-  spint c0, c1, s, t, w, aux;
-  spint r = 0x3cc3c33c5aa5a55au;
+  spint c0, c1, s, t, r, w, aux;
+  static spint R=0;
+  R+=0x3cc3c33c5aa5a55a;
+  r=R;
   c0 = (~b) & (r + 1);
   c1 = b + r;
   for (i = 0; i < 9; i++) {
