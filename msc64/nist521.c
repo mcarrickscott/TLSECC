@@ -1,23 +1,20 @@
-// Weierstrass curve support 
-// Use python scripts to generate code for standard curves, or your own curves
-// y^2=x^3+Ax+B
-// Assumes A constant is -3 or 0
-//
-// Mike Scott 5th September 2024
-// TII
-//
-// code for 32/64-bit processor for NIST curve can be generated  by 
-//
-// python curve.py 32/64 NIST521
-//
 
-// make sure decoration and generic are both set to False in monty.py or pseudo.py
+// ECDSA Implementation for curve P-521
+// see https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf
+// python curve.py 64 NIST521
+// This completes weierstrass.c for this curve. 
 
-/*** Insert automatically generated code for modulus field.c here ***/
+#include <stdio.h>
+#include <stdint.h>
+#include "hash.h"  // Some useful hash functions
 
+#include "nist521curve.h"   // elliptic curve API
 
-// Automatically generated modular arithmetic C code for pseudo-Mersenne primes
-// Command line : python pseudoms64.py NIST521
+/*** Insert automatically generated code for P-521 prime group order group.c here ***/
+/* Note that much of this code is not needed and can be deleted */
+
+// Automatically generated modular arithmetic C code
+// Command line : python montyms64.py nist521
 // Python Script by Mike Scott (Technology Innovation Institute, UAE, 2025)
 
 #include <stdint.h>
@@ -27,12 +24,11 @@
 #define spint uint64_t
 #define Wordlength 64
 #define Nlimbs 9
-#define Radix 58
+#define Radix 59
 #define Nbits 521
 #define Nbytes 66
 
-#define MERSENNE
-#define MULBYINT
+#define MONTGOMERY
 #define NIST521
 
 #include <intrin.h>
@@ -80,7 +76,7 @@ static  inline void shiftl(spint *tl, spint *th, char s) {
 static  inline void accumsl(spint *tl, spint *th, spint v, char s) {
   spint wl, wh;
   wh = v>>(64-s);
-  wl = v << s;    
+  wl = v << s;         
   *tl+=wl;
   *th+=(*tl<wl);
   *th+=wh;
@@ -167,7 +163,7 @@ static inline void accumsl(spint *tl, spint *th, spint v, char s) {
 
 // r=t>>s
 static inline spint shiftout(spint tl, spint th, char s) {
-  return __shiftright128(tl, th, s);
+  return __shiftright(tl, th, s);
 }
 
 // t+=s
@@ -180,8 +176,8 @@ static inline void add(spint *tl, spint *th, spint sl, spint sh) {
 // t-=s
 static inline void sub(spint *tl, spint *th, spint sl, spint sh) {
   unsigned char carry;
-  carry = _subborrowx_u64(0, *tl, sl, tl);
-  _subborrowx_u64(carry, *th, sh, th);
+  carry = _subborrow_u64(0, *tl, sl, tl);
+  _subborrow_u64(carry, *th, sh, th);
 }
 
 // t=a*b
@@ -202,14 +198,14 @@ static inline void muli(spint *tl, spint *th, spint m) {
 // propagate carries
 static spint inline prop(spint *n) {
   int i;
-  spint mask = ((spint)1 << 58u) - (spint)1;
+  spint mask = ((spint)1 << 59u) - (spint)1;
   sspint carry = (sspint)n[0];
-  carry >>= 58u;
+  carry >>= 59u;
   n[0] &= mask;
   for (i = 1; i < 8; i++) {
     carry += (sspint)n[i];
     n[i] = (spint)carry & mask;
-    carry >>= 58u;
+    carry >>= 59u;
   }
   n[8] += (spint)carry;
   return -((n[8] >> 1) >> 62u);
@@ -218,16 +214,26 @@ static spint inline prop(spint *n) {
 // propagate carries and add p if negative, propagate carries again
 static int inline flatten(spint *n) {
   spint carry = prop(n);
-  n[0] -= ((spint)1u) & carry;
-  n[8] += ((spint)0x200000000000000u) & carry;
+  n[0] += ((spint)0x36fb71e91386409u) & carry;
+  n[1] += ((spint)0x6b937113388f5d7u) & carry;
+  n[2] += ((spint)0x523dc269740eeu) & carry;
+  n[3] += ((spint)0x3c1df97cb35bfe6u) & carry;
+  n[4] += ((spint)0x7ffffffffa51868u) & carry;
+  n[5] -= (spint)1u & carry;
+  n[8] += ((spint)0x2000000000000u) & carry;
   (void)prop(n);
   return (int)(carry & 1);
 }
 
 // Montgomery final subtract
 static int inline modfsb(spint *n) {
-  n[0] += (spint)1u;
-  n[8] -= (spint)0x200000000000000u;
+  n[0] -= (spint)0x36fb71e91386409u;
+  n[1] -= (spint)0x6b937113388f5d7u;
+  n[2] -= (spint)0x523dc269740eeu;
+  n[3] -= (spint)0x3c1df97cb35bfe6u;
+  n[4] -= (spint)0x7ffffffffa51868u;
+  n[5] += (spint)1u;
+  n[8] -= (spint)0x2000000000000u;
   return flatten(n);
 }
 
@@ -243,11 +249,21 @@ static void inline modadd(const spint *a, const spint *b, spint *n) {
   n[6] = a[6] + b[6];
   n[7] = a[7] + b[7];
   n[8] = a[8] + b[8];
-  n[0] += (spint)2u;
-  n[8] -= (spint)0x400000000000000u;
+  n[0] -= (spint)0x6df6e3d2270c812u;
+  n[1] -= (spint)0xd726e226711ebaeu;
+  n[2] -= (spint)0xa47b84d2e81dcu;
+  n[3] -= (spint)0x783bf2f966b7fccu;
+  n[4] -= (spint)0xfffffffff4a30d0u;
+  n[5] += (spint)2u;
+  n[8] -= (spint)0x4000000000000u;
   carry = prop(n);
-  n[0] -= ((spint)2u) & carry;
-  n[8] += ((spint)0x400000000000000u) & carry;
+  n[0] += ((spint)0x6df6e3d2270c812u) & carry;
+  n[1] += ((spint)0xd726e226711ebaeu) & carry;
+  n[2] += ((spint)0xa47b84d2e81dcu) & carry;
+  n[3] += ((spint)0x783bf2f966b7fccu) & carry;
+  n[4] += ((spint)0xfffffffff4a30d0u) & carry;
+  n[5] -= (spint)2u & carry;
+  n[8] += ((spint)0x4000000000000u) & carry;
   (void)prop(n);
 }
 
@@ -264,8 +280,13 @@ static void inline modsub(const spint *a, const spint *b, spint *n) {
   n[7] = a[7] - b[7];
   n[8] = a[8] - b[8];
   carry = prop(n);
-  n[0] -= ((spint)2u) & carry;
-  n[8] += ((spint)0x400000000000000u) & carry;
+  n[0] += ((spint)0x6df6e3d2270c812u) & carry;
+  n[1] += ((spint)0xd726e226711ebaeu) & carry;
+  n[2] += ((spint)0xa47b84d2e81dcu) & carry;
+  n[3] += ((spint)0x783bf2f966b7fccu) & carry;
+  n[4] += ((spint)0xfffffffff4a30d0u) & carry;
+  n[5] -= (spint)2u & carry;
+  n[8] += ((spint)0x4000000000000u) & carry;
   (void)prop(n);
 }
 
@@ -282,144 +303,83 @@ static void inline modneg(const spint *b, spint *n) {
   n[7] = (spint)0 - b[7];
   n[8] = (spint)0 - b[8];
   carry = prop(n);
-  n[0] -= ((spint)2u) & carry;
-  n[8] += ((spint)0x400000000000000u) & carry;
+  n[0] += ((spint)0x6df6e3d2270c812u) & carry;
+  n[1] += ((spint)0xd726e226711ebaeu) & carry;
+  n[2] += ((spint)0xa47b84d2e81dcu) & carry;
+  n[3] += ((spint)0x783bf2f966b7fccu) & carry;
+  n[4] += ((spint)0xfffffffff4a30d0u) & carry;
+  n[5] -= (spint)2u & carry;
+  n[8] += ((spint)0x4000000000000u) & carry;
   (void)prop(n);
 }
 
-// Modular multiplication by an integer, c=a*b mod 2p
-static void inline modmli(const spint *a, int b, spint *c) {
-  spint tl = 0, th = 0;
-  spint carry;
-  spint s;
-  spint mask = ((spint)1 << 58u) - (spint)1;
-  accum(&tl, &th, a[0], b);
-  spint v0 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, a[1], b);
-  spint v1 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, a[2], b);
-  spint v2 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, a[3], b);
-  spint v3 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, a[4], b);
-  spint v4 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, a[5], b);
-  spint v5 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, a[6], b);
-  spint v6 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, a[7], b);
-  spint v7 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, a[8], b);
-  spint v8 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  // second reduction pass
-
-  shiftl(&tl, &th, 1);
-  add(&tl, &th, (v8 >> 57u), 0);
-  v8 &= 0x1ffffffffffffff;
-  s = v0 + (tl & mask);
-  c[0] = (spint)(s & mask);
-  carry = (s >> 58) + shiftout(tl, th, 58);
-  c[1] = v1 + carry;
-  c[2] = v2;
-  c[3] = v3;
-  c[4] = v4;
-  c[5] = v5;
-  c[6] = v6;
-  c[7] = v7;
-  c[8] = v8;
-}
-
+// Overflow limit   = 340282366920938463463374607431768211456
+// maximum possible = 3902326505693672769824936250097569004
 // Modular multiplication, c=a*b mod 2p
 static void inline modmul(const spint *a, const spint *b, spint *c) {
   spint tl = 0, th = 0;
-  spint ma1 = a[1] * (spint)0x2;
-  spint ma2 = a[2] * (spint)0x2;
-  spint ma3 = a[3] * (spint)0x2;
-  spint ma4 = a[4] * (spint)0x2;
-  spint ma5 = a[5] * (spint)0x2;
-  spint ma6 = a[6] * (spint)0x2;
-  spint ma7 = a[7] * (spint)0x2;
-  spint ma8 = a[8] * (spint)0x2;
-  spint carry;
-  spint s;
-  spint mask = ((spint)1 << 58u) - (spint)1;
-  accum(&tl, &th, ma1, b[8]);
-  accum(&tl, &th, ma2, b[7]);
-  accum(&tl, &th, ma3, b[6]);
-  accum(&tl, &th, ma4, b[5]);
-  accum(&tl, &th, ma5, b[4]);
-  accum(&tl, &th, ma6, b[3]);
-  accum(&tl, &th, ma7, b[2]);
-  accum(&tl, &th, ma8, b[1]);
+  spint p0 = 0x36fb71e91386409u;
+  spint p1 = 0x6b937113388f5d7u;
+  spint p2 = 0x523dc269740eeu;
+  spint p3 = 0x3c1df97cb35bfe6u;
+  spint p4 = 0x7ffffffffa51868u;
+  spint q = ((spint)1 << 59u); // q is unsaturated radix
+  spint mask = (spint)(q - (spint)1);
+  spint ndash = 0x52f5ccd79a995c7u;
   accum(&tl, &th, a[0], b[0]);
-  spint v0 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, ma2, b[8]);
-  accum(&tl, &th, ma3, b[7]);
-  accum(&tl, &th, ma4, b[6]);
-  accum(&tl, &th, ma5, b[5]);
-  accum(&tl, &th, ma6, b[4]);
-  accum(&tl, &th, ma7, b[3]);
-  accum(&tl, &th, ma8, b[2]);
+  spint v0 = ((tl * ndash) & mask);
+  accum(&tl, &th, v0, p0);
+  shiftr(&tl, &th, 59);
   accum(&tl, &th, a[0], b[1]);
   accum(&tl, &th, a[1], b[0]);
-  spint v1 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, ma3, b[8]);
-  accum(&tl, &th, ma4, b[7]);
-  accum(&tl, &th, ma5, b[6]);
-  accum(&tl, &th, ma6, b[5]);
-  accum(&tl, &th, ma7, b[4]);
-  accum(&tl, &th, ma8, b[3]);
+  accum(&tl, &th, v0, p1);
+  spint v1 = ((tl * ndash) & mask);
+  accum(&tl, &th, v1, p0);
+  shiftr(&tl, &th, 59);
   accum(&tl, &th, a[0], b[2]);
   accum(&tl, &th, a[1], b[1]);
   accum(&tl, &th, a[2], b[0]);
-  spint v2 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, ma4, b[8]);
-  accum(&tl, &th, ma5, b[7]);
-  accum(&tl, &th, ma6, b[6]);
-  accum(&tl, &th, ma7, b[5]);
-  accum(&tl, &th, ma8, b[4]);
+  accum(&tl, &th, v0, p2);
+  accum(&tl, &th, v1, p1);
+  spint v2 = ((tl * ndash) & mask);
+  accum(&tl, &th, v2, p0);
+  shiftr(&tl, &th, 59);
   accum(&tl, &th, a[0], b[3]);
   accum(&tl, &th, a[1], b[2]);
   accum(&tl, &th, a[2], b[1]);
   accum(&tl, &th, a[3], b[0]);
-  spint v3 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, ma5, b[8]);
-  accum(&tl, &th, ma6, b[7]);
-  accum(&tl, &th, ma7, b[6]);
-  accum(&tl, &th, ma8, b[5]);
+  accum(&tl, &th, v0, p3);
+  accum(&tl, &th, v1, p2);
+  accum(&tl, &th, v2, p1);
+  spint v3 = ((tl * ndash) & mask);
+  accum(&tl, &th, v3, p0);
+  shiftr(&tl, &th, 59);
   accum(&tl, &th, a[0], b[4]);
   accum(&tl, &th, a[1], b[3]);
   accum(&tl, &th, a[2], b[2]);
   accum(&tl, &th, a[3], b[1]);
   accum(&tl, &th, a[4], b[0]);
-  spint v4 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, ma6, b[8]);
-  accum(&tl, &th, ma7, b[7]);
-  accum(&tl, &th, ma8, b[6]);
+  accum(&tl, &th, v0, p4);
+  accum(&tl, &th, v1, p3);
+  accum(&tl, &th, v2, p2);
+  accum(&tl, &th, v3, p1);
+  spint v4 = ((tl * ndash) & mask);
+  accum(&tl, &th, v4, p0);
+  shiftr(&tl, &th, 59);
   accum(&tl, &th, a[0], b[5]);
   accum(&tl, &th, a[1], b[4]);
   accum(&tl, &th, a[2], b[3]);
   accum(&tl, &th, a[3], b[2]);
   accum(&tl, &th, a[4], b[1]);
   accum(&tl, &th, a[5], b[0]);
-  spint v5 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, ma7, b[8]);
-  accum(&tl, &th, ma8, b[7]);
+  add(&tl, &th, q - v0, 0);
+  accum(&tl, &th, v1, p4);
+  accum(&tl, &th, v2, p3);
+  accum(&tl, &th, v3, p2);
+  accum(&tl, &th, v4, p1);
+  spint v5 = ((tl * ndash) & mask);
+  accum(&tl, &th, v5, p0);
+  shiftr(&tl, &th, 59);
   accum(&tl, &th, a[0], b[6]);
   accum(&tl, &th, a[1], b[5]);
   accum(&tl, &th, a[2], b[4]);
@@ -427,9 +387,16 @@ static void inline modmul(const spint *a, const spint *b, spint *c) {
   accum(&tl, &th, a[4], b[2]);
   accum(&tl, &th, a[5], b[1]);
   accum(&tl, &th, a[6], b[0]);
-  spint v6 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, ma8, b[8]);
+  spint s = (spint)mask;
+  s -= v1;
+  accum(&tl, &th, v2, p4);
+  accum(&tl, &th, v3, p3);
+  accum(&tl, &th, v4, p2);
+  accum(&tl, &th, v5, p1);
+  add(&tl, &th, s, 0);
+  spint v6 = ((tl * ndash) & mask);
+  accum(&tl, &th, v6, p0);
+  shiftr(&tl, &th, 59);
   accum(&tl, &th, a[0], b[7]);
   accum(&tl, &th, a[1], b[6]);
   accum(&tl, &th, a[2], b[5]);
@@ -438,8 +405,16 @@ static void inline modmul(const spint *a, const spint *b, spint *c) {
   accum(&tl, &th, a[5], b[2]);
   accum(&tl, &th, a[6], b[1]);
   accum(&tl, &th, a[7], b[0]);
-  spint v7 = tl & mask;
-  shiftr(&tl, &th, 58u);
+  s = (spint)mask;
+  s -= v2;
+  accum(&tl, &th, v3, p4);
+  accum(&tl, &th, v4, p3);
+  accum(&tl, &th, v5, p2);
+  accum(&tl, &th, v6, p1);
+  add(&tl, &th, s, 0);
+  spint v7 = ((tl * ndash) & mask);
+  accum(&tl, &th, v7, p0);
+  shiftr(&tl, &th, 59);
   accum(&tl, &th, a[0], b[8]);
   accum(&tl, &th, a[1], b[7]);
   accum(&tl, &th, a[2], b[6]);
@@ -449,127 +424,323 @@ static void inline modmul(const spint *a, const spint *b, spint *c) {
   accum(&tl, &th, a[6], b[2]);
   accum(&tl, &th, a[7], b[1]);
   accum(&tl, &th, a[8], b[0]);
-  spint v8 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  // second reduction pass
-
-  shiftl(&tl, &th, 1);
-  add(&tl, &th, (v8 >> 57u), 0);
-  v8 &= 0x1ffffffffffffff;
-  s = v0 + (tl & mask);
-  c[0] = (spint)(s & mask);
-  carry = (s >> 58) + shiftout(tl, th, 58);
-  c[1] = v1 + carry;
-  c[2] = v2;
-  c[3] = v3;
-  c[4] = v4;
-  c[5] = v5;
-  c[6] = v6;
-  c[7] = v7;
-  c[8] = v8;
+  s = (spint)mask;
+  accumsl(&tl, &th, v0, 49u);
+  s -= v3;
+  accum(&tl, &th, v4, p4);
+  accum(&tl, &th, v5, p3);
+  accum(&tl, &th, v6, p2);
+  accum(&tl, &th, v7, p1);
+  add(&tl, &th, s, 0);
+  spint v8 = ((tl * ndash) & mask);
+  accum(&tl, &th, v8, p0);
+  shiftr(&tl, &th, 59);
+  accum(&tl, &th, a[1], b[8]);
+  accum(&tl, &th, a[2], b[7]);
+  accum(&tl, &th, a[3], b[6]);
+  accum(&tl, &th, a[4], b[5]);
+  accum(&tl, &th, a[5], b[4]);
+  accum(&tl, &th, a[6], b[3]);
+  accum(&tl, &th, a[7], b[2]);
+  accum(&tl, &th, a[8], b[1]);
+  s = (spint)mask;
+  accumsl(&tl, &th, v1, 49u);
+  s -= v4;
+  accum(&tl, &th, v5, p4);
+  accum(&tl, &th, v6, p3);
+  accum(&tl, &th, v7, p2);
+  accum(&tl, &th, v8, p1);
+  add(&tl, &th, s, 0);
+  c[0] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  accum(&tl, &th, a[2], b[8]);
+  accum(&tl, &th, a[3], b[7]);
+  accum(&tl, &th, a[4], b[6]);
+  accum(&tl, &th, a[5], b[5]);
+  accum(&tl, &th, a[6], b[4]);
+  accum(&tl, &th, a[7], b[3]);
+  accum(&tl, &th, a[8], b[2]);
+  s = (spint)mask;
+  accumsl(&tl, &th, v2, 49u);
+  s -= v5;
+  accum(&tl, &th, v6, p4);
+  accum(&tl, &th, v7, p3);
+  accum(&tl, &th, v8, p2);
+  add(&tl, &th, s, 0);
+  c[1] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  accum(&tl, &th, a[3], b[8]);
+  accum(&tl, &th, a[4], b[7]);
+  accum(&tl, &th, a[5], b[6]);
+  accum(&tl, &th, a[6], b[5]);
+  accum(&tl, &th, a[7], b[4]);
+  accum(&tl, &th, a[8], b[3]);
+  s = (spint)mask;
+  accumsl(&tl, &th, v3, 49u);
+  s -= v6;
+  accum(&tl, &th, v7, p4);
+  accum(&tl, &th, v8, p3);
+  add(&tl, &th, s, 0);
+  c[2] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  accum(&tl, &th, a[4], b[8]);
+  accum(&tl, &th, a[5], b[7]);
+  accum(&tl, &th, a[6], b[6]);
+  accum(&tl, &th, a[7], b[5]);
+  accum(&tl, &th, a[8], b[4]);
+  s = (spint)mask;
+  accumsl(&tl, &th, v4, 49u);
+  s -= v7;
+  accum(&tl, &th, v8, p4);
+  add(&tl, &th, s, 0);
+  c[3] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  accum(&tl, &th, a[5], b[8]);
+  accum(&tl, &th, a[6], b[7]);
+  accum(&tl, &th, a[7], b[6]);
+  accum(&tl, &th, a[8], b[5]);
+  s = (spint)mask;
+  accumsl(&tl, &th, v5, 49u);
+  s -= v8;
+  add(&tl, &th, s, 0);
+  c[4] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  accum(&tl, &th, a[6], b[8]);
+  accum(&tl, &th, a[7], b[7]);
+  accum(&tl, &th, a[8], b[6]);
+  s = (spint)mask;
+  accumsl(&tl, &th, v6, 49u);
+  add(&tl, &th, s, 0);
+  c[5] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  accum(&tl, &th, a[7], b[8]);
+  accum(&tl, &th, a[8], b[7]);
+  s = (spint)mask;
+  accumsl(&tl, &th, v7, 49u);
+  add(&tl, &th, s, 0);
+  c[6] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  accum(&tl, &th, a[8], b[8]);
+  s = (spint)mask;
+  accumsl(&tl, &th, v8, 49u);
+  add(&tl, &th, s, 0);
+  c[7] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  sub(&tl, &th, 1u, 0);
+  c[8] = tl;
 }
 
-// Modular squaring, c=a*a mod 2p
+// Modular squaring, c=a*a  mod 2p
 static void inline modsqr(const spint *a, spint *c) {
+  spint totl, toth;
   spint tl = 0, th = 0;
-  spint ta1 = a[1] * (spint)2;
-  spint ta2 = a[2] * (spint)2;
-  spint ta3 = a[3] * (spint)2;
-  spint ta4 = a[4] * (spint)2;
-  spint ta5 = a[5] * (spint)2;
-  spint ta6 = a[6] * (spint)2;
-  spint ta7 = a[7] * (spint)2;
-  spint ta8 = a[8] * (spint)2;
-  spint ma1 = a[1] * (spint)0x2;
-  spint ma2 = a[2] * (spint)0x2;
-  spint ma3 = a[3] * (spint)0x2;
-  spint ma4 = a[4] * (spint)0x2;
-  spint ma5 = a[5] * (spint)0x2;
-  spint ma6 = a[6] * (spint)0x2;
-  spint ma7 = a[7] * (spint)0x2;
-  spint ma8 = a[8] * (spint)0x2;
-  spint carry;
-  spint s;
-  spint mask = ((spint)1 << 58u) - (spint)1;
-  accum(&tl, &th, ma1, ta8);
-  accum(&tl, &th, ma2, ta7);
-  accum(&tl, &th, ma3, ta6);
-  accum(&tl, &th, ma4, ta5);
-  accum(&tl, &th, a[0], a[0]);
-  spint v0 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, ma2, ta8);
-  accum(&tl, &th, ma3, ta7);
-  accum(&tl, &th, ma4, ta6);
-  accum(&tl, &th, ma5, a[5]);
-  accum(&tl, &th, a[0], ta1);
-  spint v1 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, ma3, ta8);
-  accum(&tl, &th, ma4, ta7);
-  accum(&tl, &th, ma5, ta6);
-  accum(&tl, &th, a[0], ta2);
-  accum(&tl, &th, a[1], a[1]);
-  spint v2 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, ma4, ta8);
-  accum(&tl, &th, ma5, ta7);
-  accum(&tl, &th, ma6, a[6]);
-  accum(&tl, &th, a[0], ta3);
-  accum(&tl, &th, a[1], ta2);
-  spint v3 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, ma5, ta8);
-  accum(&tl, &th, ma6, ta7);
-  accum(&tl, &th, a[0], ta4);
-  accum(&tl, &th, a[1], ta3);
-  accum(&tl, &th, a[2], a[2]);
-  spint v4 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, ma6, ta8);
-  accum(&tl, &th, ma7, a[7]);
-  accum(&tl, &th, a[0], ta5);
-  accum(&tl, &th, a[1], ta4);
-  accum(&tl, &th, a[2], ta3);
-  spint v5 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, ma7, ta8);
-  accum(&tl, &th, a[0], ta6);
-  accum(&tl, &th, a[1], ta5);
-  accum(&tl, &th, a[2], ta4);
-  accum(&tl, &th, a[3], a[3]);
-  spint v6 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, ma8, a[8]);
-  accum(&tl, &th, a[0], ta7);
-  accum(&tl, &th, a[1], ta6);
-  accum(&tl, &th, a[2], ta5);
-  accum(&tl, &th, a[3], ta4);
-  spint v7 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  accum(&tl, &th, a[0], ta8);
-  accum(&tl, &th, a[1], ta7);
-  accum(&tl, &th, a[2], ta6);
-  accum(&tl, &th, a[3], ta5);
-  accum(&tl, &th, a[4], a[4]);
-  spint v8 = tl & mask;
-  shiftr(&tl, &th, 58u);
-  // second reduction pass
-
-  shiftl(&tl, &th, 1);
-  add(&tl, &th, (v8 >> 57u), 0);
-  v8 &= 0x1ffffffffffffff;
-  s = v0 + (tl & mask);
-  c[0] = (spint)(s & mask);
-  carry = (s >> 58) + shiftout(tl, th, 58);
-  c[1] = v1 + carry;
-  c[2] = v2;
-  c[3] = v3;
-  c[4] = v4;
-  c[5] = v5;
-  c[6] = v6;
-  c[7] = v7;
-  c[8] = v8;
+  spint p0 = 0x36fb71e91386409u;
+  spint p1 = 0x6b937113388f5d7u;
+  spint p2 = 0x523dc269740eeu;
+  spint p3 = 0x3c1df97cb35bfe6u;
+  spint p4 = 0x7ffffffffa51868u;
+  spint q = ((spint)1 << 59u); // q is unsaturated radix
+  spint mask = (spint)(q - (spint)1);
+  spint ndash = 0x52f5ccd79a995c7u;
+  mul(&totl, &toth, a[0], a[0]);
+  tl = totl;
+  th = toth;
+  spint v0 = ((tl * ndash) & mask);
+  accum(&tl, &th, v0, p0);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[0], a[1]);
+  add(&totl, &toth, totl, toth);
+  add(&tl, &th, totl, toth);
+  accum(&tl, &th, v0, p1);
+  spint v1 = ((tl * ndash) & mask);
+  accum(&tl, &th, v1, p0);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[0], a[2]);
+  add(&totl, &toth, totl, toth);
+  accum(&totl, &toth, a[1], a[1]);
+  add(&tl, &th, totl, toth);
+  accum(&tl, &th, v0, p2);
+  accum(&tl, &th, v1, p1);
+  spint v2 = ((tl * ndash) & mask);
+  accum(&tl, &th, v2, p0);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[0], a[3]);
+  accum(&totl, &toth, a[1], a[2]);
+  add(&totl, &toth, totl, toth);
+  add(&tl, &th, totl, toth);
+  accum(&tl, &th, v0, p3);
+  accum(&tl, &th, v1, p2);
+  accum(&tl, &th, v2, p1);
+  spint v3 = ((tl * ndash) & mask);
+  accum(&tl, &th, v3, p0);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[0], a[4]);
+  accum(&totl, &toth, a[1], a[3]);
+  add(&totl, &toth, totl, toth);
+  accum(&totl, &toth, a[2], a[2]);
+  add(&tl, &th, totl, toth);
+  accum(&tl, &th, v0, p4);
+  accum(&tl, &th, v1, p3);
+  accum(&tl, &th, v2, p2);
+  accum(&tl, &th, v3, p1);
+  spint v4 = ((tl * ndash) & mask);
+  accum(&tl, &th, v4, p0);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[0], a[5]);
+  accum(&totl, &toth, a[1], a[4]);
+  accum(&totl, &toth, a[2], a[3]);
+  add(&totl, &toth, totl, toth);
+  add(&tl, &th, totl, toth);
+  add(&tl, &th, q - v0, 0);
+  accum(&tl, &th, v1, p4);
+  accum(&tl, &th, v2, p3);
+  accum(&tl, &th, v3, p2);
+  accum(&tl, &th, v4, p1);
+  spint v5 = ((tl * ndash) & mask);
+  accum(&tl, &th, v5, p0);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[0], a[6]);
+  accum(&totl, &toth, a[1], a[5]);
+  accum(&totl, &toth, a[2], a[4]);
+  add(&totl, &toth, totl, toth);
+  accum(&totl, &toth, a[3], a[3]);
+  add(&tl, &th, totl, toth);
+  spint s = (spint)mask;
+  s -= v1;
+  accum(&tl, &th, v2, p4);
+  accum(&tl, &th, v3, p3);
+  accum(&tl, &th, v4, p2);
+  accum(&tl, &th, v5, p1);
+  add(&tl, &th, s, 0);
+  spint v6 = ((tl * ndash) & mask);
+  accum(&tl, &th, v6, p0);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[0], a[7]);
+  accum(&totl, &toth, a[1], a[6]);
+  accum(&totl, &toth, a[2], a[5]);
+  accum(&totl, &toth, a[3], a[4]);
+  add(&totl, &toth, totl, toth);
+  add(&tl, &th, totl, toth);
+  s = (spint)mask;
+  s -= v2;
+  accum(&tl, &th, v3, p4);
+  accum(&tl, &th, v4, p3);
+  accum(&tl, &th, v5, p2);
+  accum(&tl, &th, v6, p1);
+  add(&tl, &th, s, 0);
+  spint v7 = ((tl * ndash) & mask);
+  accum(&tl, &th, v7, p0);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[0], a[8]);
+  accum(&totl, &toth, a[1], a[7]);
+  accum(&totl, &toth, a[2], a[6]);
+  accum(&totl, &toth, a[3], a[5]);
+  add(&totl, &toth, totl, toth);
+  accum(&totl, &toth, a[4], a[4]);
+  add(&tl, &th, totl, toth);
+  s = (spint)mask;
+  accumsl(&tl, &th, v0, 49u);
+  s -= v3;
+  accum(&tl, &th, v4, p4);
+  accum(&tl, &th, v5, p3);
+  accum(&tl, &th, v6, p2);
+  accum(&tl, &th, v7, p1);
+  add(&tl, &th, s, 0);
+  spint v8 = ((tl * ndash) & mask);
+  accum(&tl, &th, v8, p0);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[1], a[8]);
+  accum(&totl, &toth, a[2], a[7]);
+  accum(&totl, &toth, a[3], a[6]);
+  accum(&totl, &toth, a[4], a[5]);
+  add(&totl, &toth, totl, toth);
+  add(&tl, &th, totl, toth);
+  s = (spint)mask;
+  accumsl(&tl, &th, v1, 49u);
+  s -= v4;
+  accum(&tl, &th, v5, p4);
+  accum(&tl, &th, v6, p3);
+  accum(&tl, &th, v7, p2);
+  accum(&tl, &th, v8, p1);
+  add(&tl, &th, s, 0);
+  c[0] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[2], a[8]);
+  accum(&totl, &toth, a[3], a[7]);
+  accum(&totl, &toth, a[4], a[6]);
+  add(&totl, &toth, totl, toth);
+  accum(&totl, &toth, a[5], a[5]);
+  add(&tl, &th, totl, toth);
+  s = (spint)mask;
+  accumsl(&tl, &th, v2, 49u);
+  s -= v5;
+  accum(&tl, &th, v6, p4);
+  accum(&tl, &th, v7, p3);
+  accum(&tl, &th, v8, p2);
+  add(&tl, &th, s, 0);
+  c[1] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[3], a[8]);
+  accum(&totl, &toth, a[4], a[7]);
+  accum(&totl, &toth, a[5], a[6]);
+  add(&totl, &toth, totl, toth);
+  add(&tl, &th, totl, toth);
+  s = (spint)mask;
+  accumsl(&tl, &th, v3, 49u);
+  s -= v6;
+  accum(&tl, &th, v7, p4);
+  accum(&tl, &th, v8, p3);
+  add(&tl, &th, s, 0);
+  c[2] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[4], a[8]);
+  accum(&totl, &toth, a[5], a[7]);
+  add(&totl, &toth, totl, toth);
+  accum(&totl, &toth, a[6], a[6]);
+  add(&tl, &th, totl, toth);
+  s = (spint)mask;
+  accumsl(&tl, &th, v4, 49u);
+  s -= v7;
+  accum(&tl, &th, v8, p4);
+  add(&tl, &th, s, 0);
+  c[3] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[5], a[8]);
+  accum(&totl, &toth, a[6], a[7]);
+  add(&totl, &toth, totl, toth);
+  add(&tl, &th, totl, toth);
+  s = (spint)mask;
+  accumsl(&tl, &th, v5, 49u);
+  s -= v8;
+  add(&tl, &th, s, 0);
+  c[4] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[6], a[8]);
+  add(&totl, &toth, totl, toth);
+  accum(&totl, &toth, a[7], a[7]);
+  add(&tl, &th, totl, toth);
+  s = (spint)mask;
+  accumsl(&tl, &th, v6, 49u);
+  add(&tl, &th, s, 0);
+  c[5] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[7], a[8]);
+  add(&totl, &toth, totl, toth);
+  add(&tl, &th, totl, toth);
+  s = (spint)mask;
+  accumsl(&tl, &th, v7, 49u);
+  add(&tl, &th, s, 0);
+  c[6] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  mul(&totl, &toth, a[8], a[8]);
+  add(&tl, &th, totl, toth);
+  s = (spint)mask;
+  accumsl(&tl, &th, v8, 49u);
+  add(&tl, &th, s, 0);
+  c[7] = (tl & mask);
+  shiftr(&tl, &th, 59);
+  sub(&tl, &th, 1u, 0);
+  c[8] = tl;
 }
 
 // copy
@@ -588,44 +759,153 @@ static void modnsqr(spint *a, int n) {
   }
 }
 
-// Calculate progenitor - use optimal addition chain
+// Calculate progenitor
 static void modpro(const spint *w, spint *z) {
   spint x[9];
   spint t0[9];
+  spint t1[9];
+  spint t2[9];
+  spint t3[9];
+  spint t4[9];
+  spint t5[9];
+  spint t6[9];
+  spint t7[9];
+  spint t8[9];
+  spint t9[9];
+  spint t10[9];
+  spint t11[9];
+  spint t12[9];
+  spint t13[9];
+  spint t14[9];
+  spint t15[9];
+  spint t16[9];
+  spint t17[9];
+  spint t18[9];
+  spint t19[9];
+  spint t20[9];
   modcpy(w, x);
-  modsqr(x, z);
-  modmul(x, z, z);
-  modcpy(z, t0);
-  modnsqr(t0, 2);
+  modsqr(x, t2);
+  modmul(x, t2, t13);
+  modmul(x, t13, t4);
+  modmul(t13, t4, t0);
+  modmul(x, t0, t5);
+  modmul(t13, t5, t16);
+  modmul(t2, t16, t10);
+  modmul(t2, t10, t18);
+  modmul(t2, t18, t1);
+  modmul(t2, t1, t12);
+  modmul(t4, t12, t15);
+  modmul(t2, t15, z);
+  modmul(t2, z, t3);
+  modmul(t2, t3, t6);
+  modmul(t5, t6, t11);
+  modmul(t4, t11, t14);
+  modmul(t4, t14, t9);
+  modmul(t2, t9, t17);
+  modmul(t4, t17, t7);
+  modmul(t4, t7, t4);
+  modmul(t2, t4, t8);
+  modmul(t2, t8, t5);
+  modmul(t2, t5, t2);
+  modcpy(t2, t19);
+  modnsqr(t19, 3);
+  modmul(t15, t19, t15);
+  modsqr(t15, t19);
+  modcpy(t19, t20);
+  modnsqr(t20, 8);
+  modmul(t15, t20, t20);
+  modnsqr(t20, 10);
+  modmul(t19, t20, t19);
+  modcpy(t19, t20);
+  modnsqr(t20, 8);
+  modmul(t15, t20, t20);
+  modnsqr(t20, 28);
+  modmul(t19, t20, t19);
+  modcpy(t19, t20);
+  modnsqr(t20, 63);
+  modmul(t19, t20, t19);
+  modcpy(t19, t20);
+  modnsqr(t20, 8);
+  modmul(t15, t20, t20);
+  modnsqr(t20, 127);
+  modmul(t19, t20, t19);
+  modmul(x, t19, t19);
+  modnsqr(t19, 7);
+  modmul(t11, t19, t19);
+  modnsqr(t19, 5);
+  modmul(t13, t19, t19);
+  modnsqr(t19, 8);
+  modmul(t10, t19, t19);
+  modnsqr(t19, 8);
+  modmul(t18, t19, t19);
+  modnsqr(t19, 11);
+  modmul(t5, t19, t19);
+  modnsqr(t19, 4);
+  modmul(t18, t19, t18);
+  modnsqr(t18, 8);
+  modmul(t17, t18, t17);
+  modnsqr(t17, 6);
+  modmul(t11, t17, t17);
+  modnsqr(t17, 5);
+  modmul(t12, t17, t17);
+  modnsqr(t17, 5);
+  modmul(t16, t17, t16);
+  modnsqr(t16, 10);
+  modmul(t15, t16, t15);
+  modnsqr(t15, 4);
+  modmul(t13, t15, t15);
+  modnsqr(t15, 15);
+  modmul(t14, t15, t14);
+  modnsqr(t14, 9);
+  modmul(t2, t14, t14);
+  modnsqr(t14, 2);
+  modmul(t13, t14, t13);
+  modnsqr(t13, 9);
+  modmul(t12, t13, t12);
+  modnsqr(t12, 7);
+  modmul(t11, t12, t11);
+  modnsqr(t11, 4);
+  modmul(t10, t11, t10);
+  modnsqr(t10, 12);
+  modmul(t5, t10, t10);
+  modnsqr(t10, 6);
+  modmul(t9, t10, t9);
+  modnsqr(t9, 7);
+  modmul(t8, t9, t8);
+  modnsqr(t8, 8);
+  modmul(t4, t8, t8);
+  modnsqr(t8, 8);
+  modmul(t1, t8, t8);
+  modnsqr(t8, 8);
+  modmul(t7, t8, t7);
+  modnsqr(t7, 5);
+  modmul(t1, t7, t7);
+  modnsqr(t7, 9);
+  modmul(t2, t7, t7);
+  modnsqr(t7, 6);
+  modmul(t6, t7, t6);
+  modnsqr(t6, 7);
+  modmul(t5, t6, t5);
+  modnsqr(t5, 7);
+  modmul(t4, t5, t4);
+  modnsqr(t4, 5);
+  modmul(t3, t4, t3);
+  modnsqr(t3, 4);
+  modmul(t0, t3, t3);
+  modnsqr(t3, 9);
+  modmul(t2, t3, t2);
+  modnsqr(t2, 7);
+  modmul(t1, t2, t1);
+  modnsqr(t1, 5);
+  modmul(t0, t1, t0);
+  modnsqr(t0, 9);
   modmul(z, t0, z);
-  modcpy(z, t0);
-  modnsqr(t0, 4);
-  modmul(z, t0, z);
-  modcpy(z, t0);
-  modnsqr(t0, 8);
-  modmul(z, t0, z);
-  modcpy(z, t0);
-  modnsqr(t0, 16);
-  modmul(z, t0, z);
-  modcpy(z, t0);
-  modnsqr(t0, 32);
-  modmul(z, t0, z);
-  modsqr(z, t0);
-  modmul(x, t0, t0);
-  modnsqr(t0, 64);
-  modmul(z, t0, z);
-  modsqr(z, t0);
-  modmul(x, t0, t0);
-  modnsqr(t0, 129);
-  modmul(z, t0, z);
-  modsqr(z, t0);
-  modmul(x, t0, t0);
-  modnsqr(t0, 259);
-  modmul(z, t0, z);
+  modnsqr(z, 6);
 }
 
-// calculate inverse, provide progenitor h if available, NULL if not
+// calculate inverse, provide progenitor h if available
 static void modinv(const spint *x, const spint *h, spint *z) {
+  int i;
   spint s[9];
   spint t[9];
   if (h == NULL) {
@@ -634,24 +914,32 @@ static void modinv(const spint *x, const spint *h, spint *z) {
     modcpy(h, t);
   }
   modcpy(x, s);
-  modnsqr(t, 2);
+  for (i = 0; i < (3 - 1); i++) {
+    modsqr(s, s);
+    modmul(s, x, s);
+  }
+  modnsqr(t, 4);
   modmul(s, t, z);
 }
 
-// Convert m to internal form, n=nres(m)
+// Convert m to n-residue form, n=nres(m)
 static void nres(const spint *m, spint *n) {
-  int i;
-  for (i = 0; i < 9; i++) {
-    n[i] = m[i];
-  }
+  const spint c[9] = {
+      0x5765fcd15cf17dbu, 0x6c812fbca5b2553u, 0x46d5e1be513b608u,
+      0x2c0753b44a31127u, 0x33fcf450ac6f345u, 0x5e636b0d472b3deu,
+      0xe03d1492d0d455u,  0x475fd1888707a5bu, 0x80e468e696d6u};
+  modmul(m, c, n);
 }
 
 // Convert n back to normal form, m=redc(n)
 static void redc(const spint *n, spint *m) {
   int i;
-  for (i = 0; i < 9; i++) {
-    m[i] = n[i];
+  spint c[9];
+  c[0] = 1;
+  for (i = 1; i < 9; i++) {
+    c[i] = 0;
   }
+  modmul(n, c, m);
   (void)modfsb(m);
 }
 
@@ -666,8 +954,8 @@ static int modis1(const spint *a) {
     d |= c[i];
   }
   c0 = (spint)c[0];
-  return ((spint)1 & ((d - (spint)1) >> 58u) &
-          (((c0 ^ (spint)1) - (spint)1) >> 58u));
+  return ((spint)1 & ((d - (spint)1) >> 59u) &
+          (((c0 ^ (spint)1) - (spint)1) >> 59u));
 }
 
 // is zero?
@@ -679,7 +967,7 @@ static int modis0(const spint *a) {
   for (i = 0; i < 9; i++) {
     d |= c[i];
   }
-  return ((spint)1 & ((d - (spint)1) >> 58u));
+  return ((spint)1 & ((d - (spint)1) >> 59u));
 }
 
 // set to zero
@@ -710,7 +998,14 @@ static void modint(int x, spint *a) {
   nres(a, a);
 }
 
-// Test for quadratic residue, provide progenitor h if available, NULL if not
+// Modular multiplication by an integer, c=a*b mod 2p
+static void inline modmli(const spint *a, int b, spint *c) {
+  spint t[9];
+  modint(b, t);
+  modmul(a, t, c);
+}
+
+// Test for quadratic residue
 static int modqr(const spint *h, const spint *x) {
   spint r[9];
   if (h == NULL) {
@@ -720,6 +1015,7 @@ static int modqr(const spint *h, const spint *x) {
     modsqr(h, r);
   }
   modmul(r, x, r);
+  modnsqr(r, 2);
   return modis1(r) | modis0(x);
 }
 
@@ -764,6 +1060,13 @@ static void modcsw(int b, volatile spint *g, volatile spint *f) {
 
 // Modular square root, provide progenitor h if available, NULL if not
 static void modsqrt(const spint *x, const spint *h, spint *r) {
+  int k;
+  spint t[9];
+  spint b[9];
+  spint v[9];
+  spint z[9] = {0x7f9c7b7b63e2205u, 0x6567b50c3590214u, 0x2de0d991f4e9c91u,
+                0x4ff9c8ee6de6cccu, 0x3a3055276d535f7u, 0x25b5f525f98aceu,
+                0x2313ef1f980035fu, 0x460bf9eb845697du, 0x9a0a650d44b2u};
   spint s[9];
   spint y[9];
   if (h == NULL) {
@@ -772,17 +1075,29 @@ static void modsqrt(const spint *x, const spint *h, spint *r) {
     modcpy(h, y);
   }
   modmul(y, x, s);
+  modmul(s, y, t);
+  nres(z, z);
+  for (k = 3; k > 1; k--) {
+    modcpy(t, b);
+    modnsqr(b, k - 2);
+    int d = 1 - modis1(b);
+    modmul(s, z, v);
+    modcmv(d, v, s);
+    modsqr(z, z);
+    modmul(t, z, v);
+    modcmv(d, v, t);
+  }
   modcpy(s, r);
 }
 
 // shift left by less than a word
 static void modshl(unsigned int n, spint *a) {
   int i;
-  a[8] = ((a[8] << n)) | (a[7] >> (58u - n));
+  a[8] = ((a[8] << n)) | (a[7] >> (59u - n));
   for (i = 7; i > 0; i--) {
-    a[i] = ((a[i] << n) & (spint)0x3ffffffffffffff) | (a[i - 1] >> (58u - n));
+    a[i] = ((a[i] << n) & (spint)0x7ffffffffffffff) | (a[i - 1] >> (59u - n));
   }
-  a[0] = (a[0] << n) & (spint)0x3ffffffffffffff;
+  a[0] = (a[0] << n) & (spint)0x7ffffffffffffff;
 }
 
 // shift right by less than a word. Return shifted out part
@@ -790,7 +1105,7 @@ static int modshr(unsigned int n, spint *a) {
   int i;
   spint r = a[0] & (((spint)1 << n) - (spint)1);
   for (i = 0; i < 8; i++) {
-    a[i] = (a[i] >> n) | ((a[i + 1] << (58u - n)) & (spint)0x3ffffffffffffff);
+    a[i] = (a[i] >> n) | ((a[i + 1] << (59u - n)) & (spint)0x7ffffffffffffff);
   }
   a[8] = a[8] >> n;
   return r;
@@ -798,13 +1113,14 @@ static int modshr(unsigned int n, spint *a) {
 
 // set a= 2^r
 static void mod2r(unsigned int r, spint *a) {
-  unsigned int n = r / 58u;
-  unsigned int m = r % 58u;
+  unsigned int n = r / 59u;
+  unsigned int m = r % 59u;
   modzer(a);
   if (r >= 66 * 8)
     return;
   a[n] = 1;
   a[n] <<= m;
+  nres(a, a);
 }
 
 // export to byte array
@@ -848,555 +1164,208 @@ static int modcmp(const spint *a, const spint *b) {
   redc(a, c);
   redc(b, d);
   for (i = 0; i < 9; i++) {
-    eq &= (((c[i] ^ d[i]) - 1) >> 58) & 1;
+    eq &= (((c[i] ^ d[i]) - 1) >> 59) & 1;
   }
   return eq;
 }
 
 /*** End of automatically generated code ***/
 
-#include "nist521curve.h"
-
+// number of bytes in representation
 #define BYTES Nbytes
-#define LIMBS Nlimbs
-#define TOPBIT (8*sizeof(int)-1)
+typedef spint gel[Nlimbs];  // group element definition
 
-/*** Insert automatically generated curve definition curve.c here ***/
+// Some utility functions for I/O and debugging
 
-
-#define COF 1
-#define CONSTANT_A -3
-static const spint constant_b[9]={0x3451fd46b503f00,0xf7e20f4b0d3c7b,0xbd3bb1bf07357,0x147b1fa4dec594b,0x18ef109e1561939,0x26cc57cee2d2264,0x540eea2da725b9,0x2687e4a688682da,0x51953eb9618e1c};
-static const spint constant_b3[9]={0x1cf5f7d41f0bd00,0x2e7a62de127b573,0x237b3153d15a05,0x3d715eee9c50be1,0xacd31da4024bab,0x3465076ca87672d,0xfc2cbe88f5712c,0x3397adf3993888e,0xf4bfbc2c24aa55};
-static const spint constant_x[9]={0x17e7e31c2e5bd66,0x22cf0615a90a6fe,0x127a2ffa8de334,0x1dfbf9d64a3f877,0x6b4d3dbaa14b5e,0x14fed487e0a2bd8,0x15b4429c6481390,0x3a73678fb2d988e,0xc6858e06b70404};
-static const spint constant_y[9]={0xbe94769fd16650,0x31c21a89cb09022,0x39013fad0761353,0x2657bd099031542,0x3273e662c97ee72,0x1e6d11a05ebef45,0x3d1bd998f544495,0x3001172297ed0b1,0x11839296a789a3b};
-
-
-
-/*** End of automatically generated code ***/
-
-// return 1 if b==c, no branching 
-static int teq(int b, int c)
-{
-    int x = b ^ c;
-    x -= 1; // if x=0, x now -1
-    return ((x >> TOPBIT) & 1);
+// reverse bytes of buff - for little endian
+static void reverse(char *buff) {
+    int n=BYTES;
+    for (int i = 0; i < n/2; i++) { 
+        char ch = buff[i]; 
+        buff[i] = buff[n - i - 1]; 
+        buff[n - i - 1] = ch; 
+    } 
 }
 
-// copy point
-void ecn521cpy(point *Q,point *P)
-{
-    modcpy(Q->x,P->x);
-    modcpy(Q->y,P->y);
-    modcpy(Q->z,P->z);
-}
-
-// negate P
-void ecn521neg(point *P)
-{
-    modneg(P->y,P->y);
-}
-
-// add Q to P
-// complete formulae from https://eprint.iacr.org/2015/1060
-void ecn521add(point *Q,point *P)
-{
-    spint B[Nlimbs],T0[Nlimbs],T1[Nlimbs],T2[Nlimbs],T3[Nlimbs],T4[Nlimbs];
-
-    modmul(P->x,Q->x,T0);   // 1
-    modmul(P->y,Q->y,T1);   // 2
-    modmul(P->z,Q->z,T2);   // 3
-
-    modadd(P->x,P->y,T3);   // 4
-    modadd(Q->x,Q->y,T4);   // 5
-    modmul(T3,T4,T3);       // 6
-
-    modadd(T0,T1,T4);       // 7
-    modsub(T3,T4,T3);       // 8
-    modadd(P->y,P->z,T4);   // 9
-
-    modadd(Q->y,Q->z,B); // 10
-    modmul(T4,B,T4);     // 11
-    modadd(T1,T2,B);        // 12  use B
-
-    modsub(T4,B,T4);        // 13
-    modadd(P->x,P->z,P->x); // 14
-    modadd(Q->z,Q->x,P->y); // 15
-
-    modmul(P->x,P->y,P->x); // 16
-    modadd(T0,T2,P->y);     // 17
-    modsub(P->x,P->y,P->y); // 18
-
-#if CONSTANT_A==0
-    modadd(T0,T0,P->x);   // 19
-    modadd(T0,P->x,T0);   // 20
-
-#ifdef CONSTANT_B
-#if CONSTANT_B>0
-    modmli(T2,3*CONSTANT_B,T2);      // 21
-    modmli(P->y,3*CONSTANT_B,P->y);  // 24
-#else
-    modmli(T2,-3*CONSTANT_B,T2);  modneg(T2,T2);    // 21
-    modmli(P->y,-3*CONSTANT_B,P->y);  modneg(P->y,P->y);// 24
-#endif
-#else
-    modcpy(constant_b3,B);
-    modmul(T2,B,T2);      // 21
-    modmul(P->y,B,P->y);  // 24
-#endif
-    modadd(T1,T2,P->z);   // 22
-    modsub(T1,T2,T1);     // 23
-
-    modmul(P->y,T4,P->x); // 25
-    modmul(T3,T1,T2);     // 26
-    modsub(T2,P->x,P->x); // 27
-    modmul(P->y,T0,P->y); // 28
-    modmul(T1,P->z,T1);   // 29
-    modadd(P->y,T1,P->y); // 30
-    modmul(T0,T3,T0);     // 31
-    modmul(P->z,T4,P->z); // 32
-    modadd(P->z,T0,P->z); // 33
-#else
-
-#ifdef CONSTANT_B
-#if CONSTANT_B>0
-    modmli(T2,CONSTANT_B,P->z);      //19
-    modsub(P->y,P->z,P->x); // 20
-    modmli(P->y,CONSTANT_B,P->y);    // 25
-#else
-    modmli(T2,-CONSTANT_B,P->z);      //19
-    modadd(P->y,P->z,P->x); // 20
-    modmli(P->y,-CONSTANT_B,P->y); modneg(P->y,P->y);    // 25
-#endif
-#else
-    modcpy(constant_b,B);
-    modmul(B,T2,P->z);      //19
-    modsub(P->y,P->z,P->x); // 20
-    modmul(P->y,B,P->y);    // 25
-#endif
-    modadd(P->x,P->x,P->z); // 21
-
-    modadd(P->x,P->z,P->x); // 22
-    modsub(T1,P->x,P->z);   // 23
-    modadd(P->x,T1,P->x);   // 24
-
-    modadd(T2,T2,T1);       // 26
-    modadd(T2,T1,T2);       // 27
-
-    modsub(P->y,T2,P->y);   // 28
-    modsub(P->y,T0,P->y);   // 29
-    modadd(P->y,P->y,T1);   // 30
-
-    modadd(P->y,T1,P->y);   // 31
-    modadd(T0,T0,T1);       // 32
-    modadd(T0,T1,T0);       // 33
-
-    modsub(T0,T2,T0);       // 34
-    modmul(T4,P->y,T1);     // 35
-    modmul(T0,P->y,T2);     // 36
-
-    modmul(P->x,P->z,P->y); // 37
-    modadd(P->y,T2,P->y);   // 38
-    modmul(P->x,T3,P->x);   // 39
-
-    modsub(P->x,T1,P->x);   // 40
-    modmul(P->z,T4,P->z);   // 41
-    modmul(T3,T0,T1);       // 42
-
-    modadd(P->z,T1,P->z);   // 43
-#endif
-}
-
-// subtract Q from P
-void ecn521sub(point *Q,point *P)
-{
-    point W;
-    ecn521cpy(Q,&W); ecn521neg(&W);
-    ecn521add(&W,P);
-}
-
-// double P
-// complete formuale from https://eprint.iacr.org/2015/1060
-void ecn521dbl(point *P)
-{
-    spint B[Nlimbs],T0[Nlimbs],T1[Nlimbs],T2[Nlimbs],T3[Nlimbs],T4[Nlimbs];
-
-#if CONSTANT_A==0
-    modsqr(P->y,T0); // 1
-    modadd(T0,T0,T3);  // 2 T3=Z3
-    modadd(T3,T3,T3);  // 3
-    modadd(T3,T3,T3);  // 4
-    modmul(P->x,P->y,T4); // 16 T4=X*Y
-    modmul(P->y,P->z,T1); // 5
-    modsqr(P->z,T2);      // 6
-#ifdef CONSTANT_B
-#if CONSTANT_B>0
-    modmli(T2,3*CONSTANT_B,T2);      // 7
-#else
-    modmli(T2,-3*CONSTANT_B,T2); modneg(T2,T2);
-#endif
-#else
-    modcpy(constant_b3,B);
-    modmul(T2,B,T2);      // 7
-#endif
-    modmul(T2,T3,P->x);   // 8
-    modadd(T0,T2,P->y);   // 9
-    modmul(T3,T1,P->z); // 10
-    modadd(T2,T2,T1);     // 11
-    modadd(T2,T1,T2);     // 12
-    modsub(T0,T2,T0);     // 13
-    modmul(P->y,T0,P->y); // 14
-    modadd(P->y,P->x,P->y); // 15
-    modmul(T0,T4,P->x);    // 17
-    modadd(P->x,P->x,P->x); // 18
-#else
-    modsqr(P->x,T0); // 1
-    modsqr(P->y,T1); // 2
-    modsqr(P->z,T2); // 3
-
-    modmul(P->x,P->y,T3); // 4
-    modmul(P->y,P->z,T4); // 28
-    modadd(T3,T3,T3);     // 5
-    modmul(P->z,P->x,P->z); // 6
-
-    modadd(P->z,P->z,P->z); // 7
-
-#ifdef CONSTANT_B
-#if CONSTANT_B>0 
-    modmli(T2,CONSTANT_B,P->y); // 8
-    modsub(P->y,P->z,P->y); // 9
-    modmli(P->z,CONSTANT_B,P->z); // 18
-#else
-    modmli(T2,-CONSTANT_B,P->y); modneg(P->y,P->y); // 8
-    modsub(P->y,P->z,P->y); // 9
-    modmli(P->z,-CONSTANT_B,P->z);  modneg(P->z,P->z); // 18
-#endif
-#else
-    modcpy(constant_b,B);
-    modmul(T2,B,P->y); // 8
-    modsub(P->y,P->z,P->y); // 9
-    modmul(P->z,B,P->z); // 18
-#endif
-
-    modadd(P->y,P->y,P->x); // 10
-    modadd(P->y,P->x,P->y); // 11
-    modsub(T1,P->y,P->x); // 12
-
-    modadd(P->y,T1,P->y); // 13
-    modmul(P->y,P->x,P->y); // 14
-    modmul(P->x,T3,P->x); // 15
-
-    modadd(T2,T2,T3); // 16
-    modadd(T2,T3,T2); // 17
-
-    modsub(P->z,T2,P->z); // 19
-    modsub(P->z,T0,P->z); // 20
-    modadd(P->z,P->z,T3); // 21
-
-    modadd(P->z,T3,P->z); // 22
-    modadd(T0,T0,T3); // 23
-    modadd(T0,T3,T0); // 24
-
-    modsub(T0,T2,T0); // 25
-    modmul(T0,P->z,T0); // 26
-    modadd(P->y,T0,P->y); // 27
-
-    modadd(T4,T4,T4); // 29
-    modmul(P->z,T4,P->z); // 30
-
-    modsub(P->x,P->z,P->x); // 31
-    modmul(T4,T1,P->z); // 32
-    modadd(P->z,P->z,P->z); // 33
-
-    modadd(P->z,P->z,P->z); // 34
-#endif
-}
-
-// set to infinity
-void ecn521inf(point *P)
-{
-    modzer(P->x);
-    modone(P->y);
-    modzer(P->z);
-}
-
-// test for infinity
-int ecn521isinf(point *P)
-{
-    return (modis0(P->x) && modis0(P->z));
-}
-
-// set to affine
-void ecn521affine(point *P)
-{
-    spint I[Nlimbs];
-    if (modis0(P->z)) {
-        modzer(P->x);
-        modone(P->y);
-        return;
-    }
-    modinv(P->z,NULL,I);
-    modone(P->z);
-    modmul(P->x,I,P->x);
-    modmul(P->y,I,P->y);
-}
-
-// move Q to P if d=1
-void ecn521cmv(int d,point *Q,point *P)
-{
-    modcmv(d,Q->x,P->x);
-    modcmv(d,Q->y,P->y);
-    modcmv(d,Q->z,P->z);
-}
-
-// return 1 if equal, else 0
-int ecn521cmp(point *P,point *Q)
-{
-    spint a[Nlimbs],b[Nlimbs];
-    modmul(P->x,Q->z,a);
-    modmul(Q->x,P->z,b);
-    if (!modcmp(a,b)) return 0;
-    modmul(P->y,Q->z,a);
-    modmul(Q->y,P->z,b);
-    if (!modcmp(a,b)) return 0;
-    return 1;
-}
-
-// extract (x,y) from point, if y is NULL compress and just return x and sign of y
-int ecn521get(point *P,char *x,char *y)
-{
-    spint X[Nlimbs],Y[Nlimbs];
-    ecn521affine(P);
-
-    modcpy(P->x,X);
-    modexp(X,x);
-
-    if (y!=NULL)
-    {
-        modcpy(P->y,Y);
-        modexp(Y,y);
-        return 0;
-    }
-    else
-        return modsign(P->y);
-}
+// I/O debug code
+// output a modulo number in hex
 /*
-int ecn521getxyz(point *P,char *x,char *y,char *z)
+static void output(spint *x) {
+    char b[Nbytes+1];
+    char buff[(2*Nbytes)+1];
+    modexp(x,b);
+    toHex(Nbytes,b,buff);
+    puts(buff);
+}
+
+// output a point (x,y)
+void outputxy(point *P)
 {
-    spint X[Nlimbs],Y[Nlimbs];
-    modexp(P->x,x);
-    modexp(P->y,y);
-    modexp(P->z,z);
-    return 0;
+    if (ecn521isinf(P)) {
+        printf("P= O\n");
+    } else {
+        char x[BYTES],y[BYTES];
+        char buff[(2*BYTES)+1];
+        ecn521get(P,x,y);
+        toHex(BYTES,x,buff);
+        printf("Px= "); puts(buff);
+        toHex(BYTES,y,buff);
+        printf("Py= "); puts(buff);
+    }
 }
 */
-// weierstrass set point function
-// sets P=O if point not on curve
-// if y!=NULL tries to set (x,y)
-// if y==NULL calculates y (decompresses x) and selects sign from s=0/1
-static void setxy(int s,const spint *x,const spint *y,point *P)
-{
-    spint T[Nlimbs],V[Nlimbs],H[Nlimbs];
-    modcpy(x,P->x);
-    modsqr(x,V);
-    modmul(V,x,V); // x^3
-#if CONSTANT_A==-3
-    modsub(V,x,V);
-    modsub(V,x,V);
-    modsub(V,x,V); // x^3-3x
-#endif
-#ifdef CONSTANT_B
-#if CONSTANT_B>0
-    modint(CONSTANT_B,T);
-    modadd(V,T,V); // V=1+dx^2
-#else
-    modint(-CONSTANT_B,T);
-    modsub(V,T,V); // V=1-dx^2
-#endif      
-#else
-    modadd(V,constant_b,V);
-#endif
-    if (y!=NULL)
-    {
-        modsqr(y,T);
-        if (modcmp(T,V)) {
-            modcpy(y,P->y);
-            modone(P->z);
-        } else {
-            ecn521inf(P);
-        }
-        return;
-    }
-    modpro(V,H);
-    if (!modqr(H,V))
-    { // point not on curve
-        ecn521inf(P);
-        return;
-    }
-    modsqrt(V,H,P->y);
-    int d=(modsign(P->y)-s)&1;
-    modneg(P->y,T);
-    modcmv(d,T,P->y);
-    modone(P->z);
-}    
 
-// multiply point by small curve cofactor (here assumed to be 1)
-void ecn521cof(point *P)
-{}
-
-// api visible version, x and y are big endian byte arrays
-void ecn521set(int s,const char *x,const char *y,point *P)
+// reduce 74 byte array h to integer r modulo group order q, in constant time
+// Consider h as 2^520.x + y, where x and y < q (x is top 9 bytes, y is bottom 65 bytes)
+// Important that x and y < q
+static void reduce(char *h,spint *r)
 {
-    spint X[Nlimbs],Y[Nlimbs];
-    modimp(x,X);
-    if (y!=NULL)
-    {
-        modimp(y,Y);
-        setxy(s,X,Y,P);
-        return;
-    }
-    setxy(s,X,NULL,P);
+    int i;
+    char buff[BYTES];
+    gel x,y,c;
+
+    mod2r(8*(BYTES-1),c); // 2^520
+
+    for (i=0;i<BYTES-1;i++)
+        buff[i]=h[i];  // little endian
+    buff[BYTES-1]=0;
+    reverse(buff);
+    modimp(buff,y);
+
+    for (i=0;i<9;i++)
+        buff[i]=h[BYTES-1+i];
+    for (i=9;i<BYTES;i++)
+        buff[i]=0;
+    reverse(buff);
+    modimp(buff,x);
+
+    modmul(x,c,x);
+    modadd(x,y,r);   // 2^520.x + y
 }
 
-// set generator
-void ecn521gen(point *P)
-{
-#ifdef CONSTANT_X
-    spint X[Nlimbs];
-    modint(CONSTANT_X,X);
-    setxy(0,X,NULL,P);
-#else
-    setxy(0,constant_x,constant_y,P);
-#endif
-}
+// API
 
-// select point from precomputed array in constant time
-static void select(int b,point W[],point *P)
-{
-    point MP;  
-    int m = b >> TOPBIT;
-    int babs = (b ^ m) - m;
+#include "tlsecc.h"
 
-    ecn521cmv(teq(babs, 0),&W[0],P); // conditional move
-    ecn521cmv(teq(babs, 1),&W[1],P); // conditional move
-    ecn521cmv(teq(babs, 2),&W[2],P); // conditional move
-    ecn521cmv(teq(babs, 3),&W[3],P); // conditional move
-    ecn521cmv(teq(babs, 4),&W[4],P); // conditional move
-    ecn521cmv(teq(babs, 5),&W[5],P); // conditional move
-    ecn521cmv(teq(babs, 6),&W[6],P); // conditional move
-    ecn521cmv(teq(babs, 7),&W[7],P); // conditional move
-    ecn521cmv(teq(babs, 8),&W[8],P); // conditional move
-    
-    ecn521cpy(P,&MP);
-    ecn521neg(&MP);  // minus P
-    ecn521cmv((int)(m & 1),&MP,P);
-}
-
-// convert to double naf form
-static void dnaf(const char *e,const char *f, signed char *w)
+// Input private key - 66 random bytes
+// Output public key - 133 bytes (0x04<x>|<y>), or 67 if compressed (0x02<x>.. or 0x03<x>)
+void NIST521_KEY_PAIR(int compress,char *SK,char *PK)
 {
-    int i,j,t;
-    unsigned char ce=0;
-    unsigned char cf=0;
-    unsigned char m,n,p,q;
-    for (i=0;i<Nbytes;i++)
-    {
-        m=n=e[Nbytes-i-1];
-        t=3*(int)n+ce;
-        ce=(unsigned char)(t>>8);
-        n=(unsigned char)(t&0xff);
-        p=q=f[Nbytes-i-1];
-        t=3*(int)q+cf;
-        cf=(unsigned char)(t>>8);
-        q=(unsigned char)(t&0xff);
-        for (j=0;j<8;j++)
-        {
-            w[8*i+j]=(n&1)-(m&1)+3*((q&1)-(p&1));
-            n>>=1; m>>=1; p>>=1; q>>=1;
-        }
-    }
-    for (j=0;j<8;j++)
-    {
-        w[8*Nbytes+j]=(ce&1)+3*(cf&1);
-        ce>>=1; cf>>=1;
+    point P;
+    ecn521gen(&P);
+    ecn521mul(SK,&P);
+
+    if (compress) {
+        PK[0]=0x02+ecn521get(&P,&PK[1],NULL); // 0x02 or 0x03
+    } else {
+        PK[0]=0x04; // no compression
+        ecn521get(&P,&PK[1],&PK[BYTES+1]);  // get x and y
     }
 }
 
-// multiply point by scalar
-// constant time
-void ecn521mul(const char *e,point *P) 
+
+// choice of hash functions
+int NIST521_PREHASH(int sha,int mlen,char *m,char * th)
 {
-    int i,j;
-    point Q,W[9];
-    signed char w[2*Nbytes+1];
+    int i;
+    char h[64];
 
-    ecn521inf(&Q);
-    ecn521inf(&W[0]);                         // O
-    ecn521cpy(P,&W[1]);                       // P
-    ecn521cpy(P,&W[2]); ecn521dbl(&W[2]);        // 2P
-    ecn521cpy(&W[2],&W[3]); ecn521add(P,&W[3]);  // 3P
-    ecn521cpy(&W[2],&W[4]); ecn521dbl(&W[4]);    // 4P
-    ecn521cpy(&W[4],&W[5]); ecn521add(P,&W[5]);  // 5P
-    ecn521cpy(&W[3],&W[6]); ecn521dbl(&W[6]);    // 6P
-    ecn521cpy(&W[6],&W[7]); ecn521add(P,&W[7]);  // 7P
-    ecn521cpy(&W[4],&W[8]); ecn521dbl(&W[8]);    // 8P
-
-// convert exponent to signed digit
-    for (i=j=0;i<Nbytes;i++,j+=2)
+    if (sha==64)
     {
-        char c=e[Nbytes-i-1];
-        w[j]=c&0xf;
-        w[j+1]=(c>>4)&0xf;
+        hash512 sh512;
+        HASH512_init(&sh512);
+        for (i=0;i<mlen;i++)
+            HASH512_process(&sh512,m[i]);
+        HASH512_hash(&sh512,h);    
+        th[0]=th[1]=0;
+        for (i=0;i<64;i++) th[i+2]=h[i]; 
+        return 1;
     }
-    w[2*Nbytes]=0;
-    for (j=0;j<2*Nbytes;j++)
-    {
-        int t=7-w[j];
-        int m=(t>>4)&1;
-        w[j]-=(m<<4);
-        w[j+1]+=m;
-    }
-
-//    printf("w= ");
-//    for (i=0;i<2*Nbytes+1;i++) printf(" %d",(int)w[i]);
-//    printf("\n");
-
-    select(w[2*Nbytes],W,P);
-    for (i = 2*Nbytes - 1; i >= 0; i--)
-    {
-        select(w[i],W,&Q);
-        ecn521dbl(P);
-        ecn521dbl(P);
-        ecn521dbl(P);
-        ecn521dbl(P);
-        ecn521add(&Q,P);
-    }
+    return 0;
 }
 
-// double point multiplication R=eP+fQ
-// not constant time
-void ecn521mul2(const char *e,point *P,const char *f,point *Q,point *R)
+
+// input private key, per-message random number, truncated hash of message to be signed. Output signature.
+// ran must be Nbytes+8 in length, in this case 74 bytes
+void NIST521_SIGN(char *prv,char *ran,char *thm,char *sig)
 {
-    int i,j;
-    point W[5];
-    signed char w[8*Nbytes+8];
-    ecn521inf(&W[0]);     // O
-    ecn521cpy(P,&W[1]);   // P
-    ecn521cpy(Q,&W[3]);   // Q
-    ecn521cpy(Q,&W[2]); ecn521sub(P,&W[2]);  // Q-P
-    ecn521cpy(Q,&W[4]); ecn521add(P,&W[4]);  // Q+P
+    int i;
+    char h[BYTES];
+    point R;
+    gel e,r,s,k;
 
-    dnaf(e,f,w);
+    modimp(thm,e);
 
-    i=8*Nbytes+7;
-    while (w[i]==0) i--; // ignore leading zeros
-    ecn521inf(R);
-    while (i>=1)
-    {
-        ecn521dbl(R);
-        j=w[i];
-        if (j>0) ecn521add(&W[j],R);
-        if (j<0) ecn521sub(&W[-j],R);
-        i--;
+    ecn521gen(&R);
+    modimp(prv,s);
+
+    reduce(ran,k);
+    modexp(k,h);
+    ecn521mul(h,&R);
+    modinv(k,NULL,k);
+
+    ecn521get(&R,h,NULL);
+    modimp(h,r);
+
+    modmul(s,r,s);
+    modadd(s,e,s);
+    modmul(s,k,s);
+    modzer(k);
+
+    modexp(r,sig);
+    modexp(s,&sig[BYTES]);
+}
+
+// input public key, message and signature
+int NIST521_VERIFY(char *pub,char *thm,char *sig) 
+{
+    point G,Q;
+    int i;
+    char rb[BYTES],u[BYTES],v[BYTES];
+    gel e,r,s,rds;
+
+    modimp(thm,e);
+
+    ecn521gen(&G);
+
+// import from signature
+    if (!modimp(sig,r)) return 0; // if not in range
+    if (!modimp(&sig[BYTES],s)) return 0;
+
+    if (modis0(r) || modis0(s)) return 0;
+    modinv(s,NULL,s);
+    modmul(r,s,rds); modexp(rds,v);  // export to byte array
+    modmul(s,e,s); modexp(s,u); 
+
+    if (pub[0]==0x04) {
+        ecn521set(0,&pub[1],&pub[BYTES+1],&Q);
+    } else {
+        ecn521set((int)pub[0]&1,&pub[1],NULL,&Q);
     }
+
+    ecn521mul2(u,&G,v,&Q,&Q);
+    if (ecn521isinf(&Q)) return 0;
+
+    ecn521get(&Q,rb,NULL);
+
+    modimp(rb,e);
+    if (modcmp(r,e)) return 1;
+    return 0;
+}
+
+int NIST521_SHARED_SECRET(char *SK,char *PK,char *SS)
+{
+    point P;
+
+    if (PK[0]==0x04) {
+        ecn521set(0,&PK[1],&PK[BYTES+1],&P);
+    } else {
+        ecn521set((int)PK[0]&1,&PK[1],NULL,&P);
+    }
+
+    ecn521mul(SK,&P);
+
+    ecn521get(&P,SS,NULL);  // x coordinate
+    if (ecn521isinf(&P)) return 0;
+    return 1;
 }

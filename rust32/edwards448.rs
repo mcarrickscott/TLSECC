@@ -1,22 +1,23 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)]
 #![allow(non_upper_case_globals)]
-#![allow(unused_imports)]
-// For example: cargo run --release --features ED448 --bin Ed448
-// python curve_rust.py 64 ED448
-// This completes edwards.rs for this curve
-// EdDSA Implementation for curve ED448
-// see https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf
+// Edwards curve support 
+// Use python scripts to generate code for ED25519 or ED448, or your own curve
+//
+// Mike Scott 4th September 2024
+// TII
+//
+// code for 32/64-bit processor for ED25519 curve can be generated  by 
+//
+// python curve_rust.py 32/64 ED25519
+//
+// code for 32/64-bit processor for ED448 curve can be generated  by
+//
+// python curve_rust.py 32/64 ED448
 
-use crate::ed448;
-use crate::ed448::*;
-use crate::ed448::ECP;
+// make sure decoration and generic are both set to False in monty_rust.py or pseudo_rust.py
 
-use crate::hash;
-use crate::hash::*;
-
-/*** Insert code automatically generated in group.rs here ***/
-/* Note that much of this code is not needed and can be deleted */
+/*** Insert automatically generated code for modulus field.rs here ***/
 
 type SPINT = u32;
 type SSPINT = i32;
@@ -44,16 +45,9 @@ fn prop(n: &mut [SPINT]) -> SPINT {
 fn flatten(n: &mut [SPINT]) -> bool {
     let q = (1 as SPINT) << 28;
     let carry = prop(n);
-    n[0] += (0xb5844f3 as SPINT) & (carry as SPINT);
-    n[1] += (0x78c292a as SPINT) & (carry as SPINT);
-    n[2] += (0x58f5523 as SPINT) & (carry as SPINT);
-    n[3] += (0xc2728dc as SPINT) & (carry as SPINT);
-    n[4] += (0x690216c as SPINT) & (carry as SPINT);
-    n[5] += (0x49aed63 as SPINT) & (carry as SPINT);
-    n[6] += (0x9c44edb as SPINT) & (carry as SPINT);
-    n[7] += (0x7cca23e as SPINT) & (carry as SPINT);
+    n[0] -= 1 & (carry as SPINT);
     n[8] -= 1 & (carry as SPINT);
-    n[15] += (0x4000000 as SPINT) & (carry as SPINT);
+    n[15] += (1 * q) & (carry as SPINT);
     prop(n);
     return (carry & 1) == 1;
 }
@@ -62,22 +56,16 @@ fn flatten(n: &mut [SPINT]) -> bool {
 #[allow(unused_variables)]
 fn modfsb(n: &mut [SPINT]) -> bool {
     let q = (1 as SPINT) << 28;
-    n[0] -= 0xb5844f3 as SPINT;
-    n[1] -= 0x78c292a as SPINT;
-    n[2] -= 0x58f5523 as SPINT;
-    n[3] -= 0xc2728dc as SPINT;
-    n[4] -= 0x690216c as SPINT;
-    n[5] -= 0x49aed63 as SPINT;
-    n[6] -= 0x9c44edb as SPINT;
-    n[7] -= 0x7cca23e as SPINT;
+    n[0] += 1;
     n[8] += 1;
-    n[15] -= 0x4000000 as SPINT;
+    n[15] -= 1 * q;
     return flatten(n);
 }
 
 //Modular addition - reduce less than 2p
 #[allow(unused_variables)]
 fn modadd(b: &[SPINT], n: &mut [SPINT]) {
+    let q = (1 as SPINT) << 28;
     n[0] = n[0] + b[0];
     n[1] = n[1] + b[1];
     n[2] = n[2] + b[2];
@@ -94,27 +82,13 @@ fn modadd(b: &[SPINT], n: &mut [SPINT]) {
     n[13] = n[13] + b[13];
     n[14] = n[14] + b[14];
     n[15] = n[15] + b[15];
-    n[0] -= 0x16b089e6 as SPINT;
-    n[1] -= 0xf185254 as SPINT;
-    n[2] -= 0xb1eaa46 as SPINT;
-    n[3] -= 0x184e51b8 as SPINT;
-    n[4] -= 0xd2042d8 as SPINT;
-    n[5] -= 0x935dac6 as SPINT;
-    n[6] -= 0x13889db6 as SPINT;
-    n[7] -= 0xf99447c as SPINT;
+    n[0] += 2;
     n[8] += 2;
-    n[15] -= 0x8000000 as SPINT;
+    n[15] -= 2 * q;
     let carry = prop(n);
-    n[0] += (0x16b089e6 as SPINT) & (carry as SPINT);
-    n[1] += (0xf185254 as SPINT) & (carry as SPINT);
-    n[2] += (0xb1eaa46 as SPINT) & (carry as SPINT);
-    n[3] += (0x184e51b8 as SPINT) & (carry as SPINT);
-    n[4] += (0xd2042d8 as SPINT) & (carry as SPINT);
-    n[5] += (0x935dac6 as SPINT) & (carry as SPINT);
-    n[6] += (0x13889db6 as SPINT) & (carry as SPINT);
-    n[7] += (0xf99447c as SPINT) & (carry as SPINT);
+    n[0] -= 2 & (carry as SPINT);
     n[8] -= 2 & (carry as SPINT);
-    n[15] += (0x8000000 as SPINT) & (carry as SPINT);
+    n[15] += (2 * q) & (carry as SPINT);
     prop(n);
     return;
 }
@@ -122,6 +96,7 @@ fn modadd(b: &[SPINT], n: &mut [SPINT]) {
 //Modular subtraction - reduce less than 2p
 #[allow(unused_variables)]
 fn modsub(b: &[SPINT], n: &mut [SPINT]) {
+    let q = (1 as SPINT) << 28;
     n[0] = n[0] - b[0];
     n[1] = n[1] - b[1];
     n[2] = n[2] - b[2];
@@ -139,16 +114,9 @@ fn modsub(b: &[SPINT], n: &mut [SPINT]) {
     n[14] = n[14] - b[14];
     n[15] = n[15] - b[15];
     let carry = prop(n);
-    n[0] += (0x16b089e6 as SPINT) & (carry as SPINT);
-    n[1] += (0xf185254 as SPINT) & (carry as SPINT);
-    n[2] += (0xb1eaa46 as SPINT) & (carry as SPINT);
-    n[3] += (0x184e51b8 as SPINT) & (carry as SPINT);
-    n[4] += (0xd2042d8 as SPINT) & (carry as SPINT);
-    n[5] += (0x935dac6 as SPINT) & (carry as SPINT);
-    n[6] += (0x13889db6 as SPINT) & (carry as SPINT);
-    n[7] += (0xf99447c as SPINT) & (carry as SPINT);
+    n[0] -= 2 & (carry as SPINT);
     n[8] -= 2 & (carry as SPINT);
-    n[15] += (0x8000000 as SPINT) & (carry as SPINT);
+    n[15] += (2 * q) & (carry as SPINT);
     prop(n);
     return;
 }
@@ -156,6 +124,7 @@ fn modsub(b: &[SPINT], n: &mut [SPINT]) {
 //Modular negation
 #[allow(unused_variables)]
 fn modneg(n: &mut [SPINT]) {
+    let q = (1 as SPINT) << 28;
     n[0] = (0 as SPINT) - n[0];
     n[1] = (0 as SPINT) - n[1];
     n[2] = (0 as SPINT) - n[2];
@@ -173,83 +142,107 @@ fn modneg(n: &mut [SPINT]) {
     n[14] = (0 as SPINT) - n[14];
     n[15] = (0 as SPINT) - n[15];
     let carry = prop(n);
-    n[0] += (0x16b089e6 as SPINT) & (carry as SPINT);
-    n[1] += (0xf185254 as SPINT) & (carry as SPINT);
-    n[2] += (0xb1eaa46 as SPINT) & (carry as SPINT);
-    n[3] += (0x184e51b8 as SPINT) & (carry as SPINT);
-    n[4] += (0xd2042d8 as SPINT) & (carry as SPINT);
-    n[5] += (0x935dac6 as SPINT) & (carry as SPINT);
-    n[6] += (0x13889db6 as SPINT) & (carry as SPINT);
-    n[7] += (0xf99447c as SPINT) & (carry as SPINT);
+    n[0] -= 2 & (carry as SPINT);
     n[8] -= 2 & (carry as SPINT);
-    n[15] += (0x8000000 as SPINT) & (carry as SPINT);
+    n[15] += (2 * q) & (carry as SPINT);
     prop(n);
     return;
 }
 
 // Modular multiplication by an integer, c=c*b mod 2p
 #[allow(dead_code)]
-fn modmli(_b: usize, _c: &mut [SPINT]) {
+fn modmli(b: usize, c: &mut [SPINT]) {
+    let mut t = 0 as UDPINT;
+    let mask = ((1 as SPINT) << 28) - 1;
+    t += (c[0] as UDPINT) * (b as UDPINT);
+    c[0] = (t as SPINT) & mask;
+    t = t >> 28;
+    t += (c[1] as UDPINT) * (b as UDPINT);
+    c[1] = (t as SPINT) & mask;
+    t = t >> 28;
+    t += (c[2] as UDPINT) * (b as UDPINT);
+    c[2] = (t as SPINT) & mask;
+    t = t >> 28;
+    t += (c[3] as UDPINT) * (b as UDPINT);
+    c[3] = (t as SPINT) & mask;
+    t = t >> 28;
+    t += (c[4] as UDPINT) * (b as UDPINT);
+    c[4] = (t as SPINT) & mask;
+    t = t >> 28;
+    t += (c[5] as UDPINT) * (b as UDPINT);
+    c[5] = (t as SPINT) & mask;
+    t = t >> 28;
+    t += (c[6] as UDPINT) * (b as UDPINT);
+    c[6] = (t as SPINT) & mask;
+    t = t >> 28;
+    t += (c[7] as UDPINT) * (b as UDPINT);
+    c[7] = (t as SPINT) & mask;
+    t = t >> 28;
+    t += (c[8] as UDPINT) * (b as UDPINT);
+    c[8] = (t as SPINT) & mask;
+    t = t >> 28;
+    t += (c[9] as UDPINT) * (b as UDPINT);
+    c[9] = (t as SPINT) & mask;
+    t = t >> 28;
+    t += (c[10] as UDPINT) * (b as UDPINT);
+    c[10] = (t as SPINT) & mask;
+    t = t >> 28;
+    t += (c[11] as UDPINT) * (b as UDPINT);
+    c[11] = (t as SPINT) & mask;
+    t = t >> 28;
+    t += (c[12] as UDPINT) * (b as UDPINT);
+    c[12] = (t as SPINT) & mask;
+    t = t >> 28;
+    t += (c[13] as UDPINT) * (b as UDPINT);
+    c[13] = (t as SPINT) & mask;
+    t = t >> 28;
+    t += (c[14] as UDPINT) * (b as UDPINT);
+    c[14] = (t as SPINT) & mask;
+    t = t >> 28;
+    t += (c[15] as UDPINT) * (b as UDPINT);
+    c[15] = (t as SPINT) & mask;
+    t = t >> 28;
+    // reduction pass
+
+    let s = t as SPINT;
+    c[0] += s;
+    c[8] += s;
     return;
 }
 
 // Overflow limit   = 18446744073709551616
-// maximum possible = 1465199085000135691
+// maximum possible = 1152921565004824591
 // Modular multiplication, c=c*b mod 2p
 #[allow(unused_variables)]
 fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     let mut t = 0 as DPINT;
     let mut s: SPINT;
-    let p0 = 0xb5844f3 as SPINT;
-    let p1 = 0x78c292a as SPINT;
-    let p2 = 0x58f5523 as SPINT;
-    let p3 = 0xc2728dc as SPINT;
-    let p4 = 0x690216c as SPINT;
-    let p5 = 0x49aed63 as SPINT;
-    let p6 = 0x9c44edb as SPINT;
-    let p7 = 0x7cca23e as SPINT;
     let q = (1 as SPINT) << 28; // q is unsaturated radix
     let mask = (q - 1) as SPINT;
-    let ndash = 0xe918bc5 as SPINT;
     t += (c[0] as DPINT) * (b[0] as DPINT);
-    let v0 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v0 as DPINT) * (p0 as DPINT);
+    let v0 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[0] as DPINT) * (b[1] as DPINT);
     t += (c[1] as DPINT) * (b[0] as DPINT);
-    t += (v0 as DPINT) * (p1 as DPINT);
-    let v1 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v1 as DPINT) * (p0 as DPINT);
+    let v1 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[0] as DPINT) * (b[2] as DPINT);
     t += (c[1] as DPINT) * (b[1] as DPINT);
     t += (c[2] as DPINT) * (b[0] as DPINT);
-    t += (v0 as DPINT) * (p2 as DPINT);
-    t += (v1 as DPINT) * (p1 as DPINT);
-    let v2 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v2 as DPINT) * (p0 as DPINT);
+    let v2 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[0] as DPINT) * (b[3] as DPINT);
     t += (c[1] as DPINT) * (b[2] as DPINT);
     t += (c[2] as DPINT) * (b[1] as DPINT);
     t += (c[3] as DPINT) * (b[0] as DPINT);
-    t += (v0 as DPINT) * (p3 as DPINT);
-    t += (v1 as DPINT) * (p2 as DPINT);
-    t += (v2 as DPINT) * (p1 as DPINT);
-    let v3 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v3 as DPINT) * (p0 as DPINT);
+    let v3 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[0] as DPINT) * (b[4] as DPINT);
     t += (c[1] as DPINT) * (b[3] as DPINT);
     t += (c[2] as DPINT) * (b[2] as DPINT);
     t += (c[3] as DPINT) * (b[1] as DPINT);
     t += (c[4] as DPINT) * (b[0] as DPINT);
-    t += (v0 as DPINT) * (p4 as DPINT);
-    t += (v1 as DPINT) * (p3 as DPINT);
-    t += (v2 as DPINT) * (p2 as DPINT);
-    t += (v3 as DPINT) * (p1 as DPINT);
-    let v4 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v4 as DPINT) * (p0 as DPINT);
+    let v4 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[0] as DPINT) * (b[5] as DPINT);
     t += (c[1] as DPINT) * (b[4] as DPINT);
@@ -257,13 +250,7 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[3] as DPINT) * (b[2] as DPINT);
     t += (c[4] as DPINT) * (b[1] as DPINT);
     t += (c[5] as DPINT) * (b[0] as DPINT);
-    t += (v0 as DPINT) * (p5 as DPINT);
-    t += (v1 as DPINT) * (p4 as DPINT);
-    t += (v2 as DPINT) * (p3 as DPINT);
-    t += (v3 as DPINT) * (p2 as DPINT);
-    t += (v4 as DPINT) * (p1 as DPINT);
-    let v5 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v5 as DPINT) * (p0 as DPINT);
+    let v5 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[0] as DPINT) * (b[6] as DPINT);
     t += (c[1] as DPINT) * (b[5] as DPINT);
@@ -272,14 +259,7 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[4] as DPINT) * (b[2] as DPINT);
     t += (c[5] as DPINT) * (b[1] as DPINT);
     t += (c[6] as DPINT) * (b[0] as DPINT);
-    t += (v0 as DPINT) * (p6 as DPINT);
-    t += (v1 as DPINT) * (p5 as DPINT);
-    t += (v2 as DPINT) * (p4 as DPINT);
-    t += (v3 as DPINT) * (p3 as DPINT);
-    t += (v4 as DPINT) * (p2 as DPINT);
-    t += (v5 as DPINT) * (p1 as DPINT);
-    let v6 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v6 as DPINT) * (p0 as DPINT);
+    let v6 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[0] as DPINT) * (b[7] as DPINT);
     t += (c[1] as DPINT) * (b[6] as DPINT);
@@ -289,15 +269,7 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[5] as DPINT) * (b[2] as DPINT);
     t += (c[6] as DPINT) * (b[1] as DPINT);
     t += (c[7] as DPINT) * (b[0] as DPINT);
-    t += (v0 as DPINT) * (p7 as DPINT);
-    t += (v1 as DPINT) * (p6 as DPINT);
-    t += (v2 as DPINT) * (p5 as DPINT);
-    t += (v3 as DPINT) * (p4 as DPINT);
-    t += (v4 as DPINT) * (p3 as DPINT);
-    t += (v5 as DPINT) * (p2 as DPINT);
-    t += (v6 as DPINT) * (p1 as DPINT);
-    let v7 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v7 as DPINT) * (p0 as DPINT);
+    let v7 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[0] as DPINT) * (b[8] as DPINT);
     t += (c[1] as DPINT) * (b[7] as DPINT);
@@ -309,15 +281,7 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[7] as DPINT) * (b[1] as DPINT);
     t += (c[8] as DPINT) * (b[0] as DPINT);
     t += (q - v0) as DPINT;
-    t += (v1 as DPINT) * (p7 as DPINT);
-    t += (v2 as DPINT) * (p6 as DPINT);
-    t += (v3 as DPINT) * (p5 as DPINT);
-    t += (v4 as DPINT) * (p4 as DPINT);
-    t += (v5 as DPINT) * (p3 as DPINT);
-    t += (v6 as DPINT) * (p2 as DPINT);
-    t += (v7 as DPINT) * (p1 as DPINT);
-    let v8 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v8 as DPINT) * (p0 as DPINT);
+    let v8 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[0] as DPINT) * (b[9] as DPINT);
     t += (c[1] as DPINT) * (b[8] as DPINT);
@@ -331,16 +295,8 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[9] as DPINT) * (b[0] as DPINT);
     s = mask as SPINT;
     s -= v1;
-    t += (v2 as DPINT) * (p7 as DPINT);
-    t += (v3 as DPINT) * (p6 as DPINT);
-    t += (v4 as DPINT) * (p5 as DPINT);
-    t += (v5 as DPINT) * (p4 as DPINT);
-    t += (v6 as DPINT) * (p3 as DPINT);
-    t += (v7 as DPINT) * (p2 as DPINT);
-    t += (v8 as DPINT) * (p1 as DPINT);
     t += s as DPINT;
-    let v9 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v9 as DPINT) * (p0 as DPINT);
+    let v9 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[0] as DPINT) * (b[10] as DPINT);
     t += (c[1] as DPINT) * (b[9] as DPINT);
@@ -355,16 +311,8 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[10] as DPINT) * (b[0] as DPINT);
     s = mask as SPINT;
     s -= v2;
-    t += (v3 as DPINT) * (p7 as DPINT);
-    t += (v4 as DPINT) * (p6 as DPINT);
-    t += (v5 as DPINT) * (p5 as DPINT);
-    t += (v6 as DPINT) * (p4 as DPINT);
-    t += (v7 as DPINT) * (p3 as DPINT);
-    t += (v8 as DPINT) * (p2 as DPINT);
-    t += (v9 as DPINT) * (p1 as DPINT);
     t += s as DPINT;
-    let v10 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v10 as DPINT) * (p0 as DPINT);
+    let v10 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[0] as DPINT) * (b[11] as DPINT);
     t += (c[1] as DPINT) * (b[10] as DPINT);
@@ -380,16 +328,8 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[11] as DPINT) * (b[0] as DPINT);
     s = mask as SPINT;
     s -= v3;
-    t += (v4 as DPINT) * (p7 as DPINT);
-    t += (v5 as DPINT) * (p6 as DPINT);
-    t += (v6 as DPINT) * (p5 as DPINT);
-    t += (v7 as DPINT) * (p4 as DPINT);
-    t += (v8 as DPINT) * (p3 as DPINT);
-    t += (v9 as DPINT) * (p2 as DPINT);
-    t += (v10 as DPINT) * (p1 as DPINT);
     t += s as DPINT;
-    let v11 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v11 as DPINT) * (p0 as DPINT);
+    let v11 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[0] as DPINT) * (b[12] as DPINT);
     t += (c[1] as DPINT) * (b[11] as DPINT);
@@ -406,16 +346,8 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[12] as DPINT) * (b[0] as DPINT);
     s = mask as SPINT;
     s -= v4;
-    t += (v5 as DPINT) * (p7 as DPINT);
-    t += (v6 as DPINT) * (p6 as DPINT);
-    t += (v7 as DPINT) * (p5 as DPINT);
-    t += (v8 as DPINT) * (p4 as DPINT);
-    t += (v9 as DPINT) * (p3 as DPINT);
-    t += (v10 as DPINT) * (p2 as DPINT);
-    t += (v11 as DPINT) * (p1 as DPINT);
     t += s as DPINT;
-    let v12 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v12 as DPINT) * (p0 as DPINT);
+    let v12 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[0] as DPINT) * (b[13] as DPINT);
     t += (c[1] as DPINT) * (b[12] as DPINT);
@@ -433,16 +365,8 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[13] as DPINT) * (b[0] as DPINT);
     s = mask as SPINT;
     s -= v5;
-    t += (v6 as DPINT) * (p7 as DPINT);
-    t += (v7 as DPINT) * (p6 as DPINT);
-    t += (v8 as DPINT) * (p5 as DPINT);
-    t += (v9 as DPINT) * (p4 as DPINT);
-    t += (v10 as DPINT) * (p3 as DPINT);
-    t += (v11 as DPINT) * (p2 as DPINT);
-    t += (v12 as DPINT) * (p1 as DPINT);
     t += s as DPINT;
-    let v13 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v13 as DPINT) * (p0 as DPINT);
+    let v13 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[0] as DPINT) * (b[14] as DPINT);
     t += (c[1] as DPINT) * (b[13] as DPINT);
@@ -461,16 +385,8 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[14] as DPINT) * (b[0] as DPINT);
     s = mask as SPINT;
     s -= v6;
-    t += (v7 as DPINT) * (p7 as DPINT);
-    t += (v8 as DPINT) * (p6 as DPINT);
-    t += (v9 as DPINT) * (p5 as DPINT);
-    t += (v10 as DPINT) * (p4 as DPINT);
-    t += (v11 as DPINT) * (p3 as DPINT);
-    t += (v12 as DPINT) * (p2 as DPINT);
-    t += (v13 as DPINT) * (p1 as DPINT);
     t += s as DPINT;
-    let v14 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v14 as DPINT) * (p0 as DPINT);
+    let v14 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[0] as DPINT) * (b[15] as DPINT);
     t += (c[1] as DPINT) * (b[14] as DPINT);
@@ -489,18 +405,9 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[14] as DPINT) * (b[1] as DPINT);
     t += (c[15] as DPINT) * (b[0] as DPINT);
     s = mask as SPINT;
-    t += (v0 as DPINT) << 26;
     s -= v7;
-    t += (v8 as DPINT) * (p7 as DPINT);
-    t += (v9 as DPINT) * (p6 as DPINT);
-    t += (v10 as DPINT) * (p5 as DPINT);
-    t += (v11 as DPINT) * (p4 as DPINT);
-    t += (v12 as DPINT) * (p3 as DPINT);
-    t += (v13 as DPINT) * (p2 as DPINT);
-    t += (v14 as DPINT) * (p1 as DPINT);
     t += s as DPINT;
-    let v15 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v15 as DPINT) * (p0 as DPINT);
+    let v15 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[1] as DPINT) * (b[15] as DPINT);
     t += (c[2] as DPINT) * (b[14] as DPINT);
@@ -518,17 +425,10 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[14] as DPINT) * (b[2] as DPINT);
     t += (c[15] as DPINT) * (b[1] as DPINT);
     s = mask as SPINT;
-    t += (v1 as DPINT) << 26;
+    s += v0;
     s -= v8;
-    t += (v9 as DPINT) * (p7 as DPINT);
-    t += (v10 as DPINT) * (p6 as DPINT);
-    t += (v11 as DPINT) * (p5 as DPINT);
-    t += (v12 as DPINT) * (p4 as DPINT);
-    t += (v13 as DPINT) * (p3 as DPINT);
-    t += (v14 as DPINT) * (p2 as DPINT);
-    t += (v15 as DPINT) * (p1 as DPINT);
     t += s as DPINT;
-    c[0] = ((t as SPINT) & mask) as SPINT;
+    let v16 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[2] as DPINT) * (b[15] as DPINT);
     t += (c[3] as DPINT) * (b[14] as DPINT);
@@ -545,16 +445,10 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[14] as DPINT) * (b[3] as DPINT);
     t += (c[15] as DPINT) * (b[2] as DPINT);
     s = mask as SPINT;
-    t += (v2 as DPINT) << 26;
+    s += v1;
     s -= v9;
-    t += (v10 as DPINT) * (p7 as DPINT);
-    t += (v11 as DPINT) * (p6 as DPINT);
-    t += (v12 as DPINT) * (p5 as DPINT);
-    t += (v13 as DPINT) * (p4 as DPINT);
-    t += (v14 as DPINT) * (p3 as DPINT);
-    t += (v15 as DPINT) * (p2 as DPINT);
     t += s as DPINT;
-    c[1] = ((t as SPINT) & mask) as SPINT;
+    c[0] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[3] as DPINT) * (b[15] as DPINT);
     t += (c[4] as DPINT) * (b[14] as DPINT);
@@ -570,15 +464,10 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[14] as DPINT) * (b[4] as DPINT);
     t += (c[15] as DPINT) * (b[3] as DPINT);
     s = mask as SPINT;
-    t += (v3 as DPINT) << 26;
+    s += v2;
     s -= v10;
-    t += (v11 as DPINT) * (p7 as DPINT);
-    t += (v12 as DPINT) * (p6 as DPINT);
-    t += (v13 as DPINT) * (p5 as DPINT);
-    t += (v14 as DPINT) * (p4 as DPINT);
-    t += (v15 as DPINT) * (p3 as DPINT);
     t += s as DPINT;
-    c[2] = ((t as SPINT) & mask) as SPINT;
+    c[1] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[4] as DPINT) * (b[15] as DPINT);
     t += (c[5] as DPINT) * (b[14] as DPINT);
@@ -593,14 +482,10 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[14] as DPINT) * (b[5] as DPINT);
     t += (c[15] as DPINT) * (b[4] as DPINT);
     s = mask as SPINT;
-    t += (v4 as DPINT) << 26;
+    s += v3;
     s -= v11;
-    t += (v12 as DPINT) * (p7 as DPINT);
-    t += (v13 as DPINT) * (p6 as DPINT);
-    t += (v14 as DPINT) * (p5 as DPINT);
-    t += (v15 as DPINT) * (p4 as DPINT);
     t += s as DPINT;
-    c[3] = ((t as SPINT) & mask) as SPINT;
+    c[2] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[5] as DPINT) * (b[15] as DPINT);
     t += (c[6] as DPINT) * (b[14] as DPINT);
@@ -614,13 +499,10 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[14] as DPINT) * (b[6] as DPINT);
     t += (c[15] as DPINT) * (b[5] as DPINT);
     s = mask as SPINT;
-    t += (v5 as DPINT) << 26;
+    s += v4;
     s -= v12;
-    t += (v13 as DPINT) * (p7 as DPINT);
-    t += (v14 as DPINT) * (p6 as DPINT);
-    t += (v15 as DPINT) * (p5 as DPINT);
     t += s as DPINT;
-    c[4] = ((t as SPINT) & mask) as SPINT;
+    c[3] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[6] as DPINT) * (b[15] as DPINT);
     t += (c[7] as DPINT) * (b[14] as DPINT);
@@ -633,12 +515,10 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[14] as DPINT) * (b[7] as DPINT);
     t += (c[15] as DPINT) * (b[6] as DPINT);
     s = mask as SPINT;
-    t += (v6 as DPINT) << 26;
+    s += v5;
     s -= v13;
-    t += (v14 as DPINT) * (p7 as DPINT);
-    t += (v15 as DPINT) * (p6 as DPINT);
     t += s as DPINT;
-    c[5] = ((t as SPINT) & mask) as SPINT;
+    c[4] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[7] as DPINT) * (b[15] as DPINT);
     t += (c[8] as DPINT) * (b[14] as DPINT);
@@ -650,11 +530,10 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[14] as DPINT) * (b[8] as DPINT);
     t += (c[15] as DPINT) * (b[7] as DPINT);
     s = mask as SPINT;
-    t += (v7 as DPINT) << 26;
+    s += v6;
     s -= v14;
-    t += (v15 as DPINT) * (p7 as DPINT);
     t += s as DPINT;
-    c[6] = ((t as SPINT) & mask) as SPINT;
+    c[5] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[8] as DPINT) * (b[15] as DPINT);
     t += (c[9] as DPINT) * (b[14] as DPINT);
@@ -665,10 +544,10 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[14] as DPINT) * (b[9] as DPINT);
     t += (c[15] as DPINT) * (b[8] as DPINT);
     s = mask as SPINT;
-    t += (v8 as DPINT) << 26;
+    s += v7;
     s -= v15;
     t += s as DPINT;
-    c[7] = ((t as SPINT) & mask) as SPINT;
+    c[6] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[9] as DPINT) * (b[15] as DPINT);
     t += (c[10] as DPINT) * (b[14] as DPINT);
@@ -678,9 +557,10 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[14] as DPINT) * (b[10] as DPINT);
     t += (c[15] as DPINT) * (b[9] as DPINT);
     s = mask as SPINT;
-    t += (v9 as DPINT) << 26;
+    s += v8;
+    s -= v16;
     t += s as DPINT;
-    c[8] = ((t as SPINT) & mask) as SPINT;
+    c[7] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[10] as DPINT) * (b[15] as DPINT);
     t += (c[11] as DPINT) * (b[14] as DPINT);
@@ -689,9 +569,9 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[14] as DPINT) * (b[11] as DPINT);
     t += (c[15] as DPINT) * (b[10] as DPINT);
     s = mask as SPINT;
-    t += (v10 as DPINT) << 26;
+    s += v9;
     t += s as DPINT;
-    c[9] = ((t as SPINT) & mask) as SPINT;
+    c[8] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[11] as DPINT) * (b[15] as DPINT);
     t += (c[12] as DPINT) * (b[14] as DPINT);
@@ -699,41 +579,46 @@ fn modmul(b: &[SPINT], c: &mut [SPINT]) {
     t += (c[14] as DPINT) * (b[12] as DPINT);
     t += (c[15] as DPINT) * (b[11] as DPINT);
     s = mask as SPINT;
-    t += (v11 as DPINT) << 26;
+    s += v10;
     t += s as DPINT;
-    c[10] = ((t as SPINT) & mask) as SPINT;
+    c[9] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[12] as DPINT) * (b[15] as DPINT);
     t += (c[13] as DPINT) * (b[14] as DPINT);
     t += (c[14] as DPINT) * (b[13] as DPINT);
     t += (c[15] as DPINT) * (b[12] as DPINT);
     s = mask as SPINT;
-    t += (v12 as DPINT) << 26;
+    s += v11;
     t += s as DPINT;
-    c[11] = ((t as SPINT) & mask) as SPINT;
+    c[10] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[13] as DPINT) * (b[15] as DPINT);
     t += (c[14] as DPINT) * (b[14] as DPINT);
     t += (c[15] as DPINT) * (b[13] as DPINT);
     s = mask as SPINT;
-    t += (v13 as DPINT) << 26;
+    s += v12;
     t += s as DPINT;
-    c[12] = ((t as SPINT) & mask) as SPINT;
+    c[11] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[14] as DPINT) * (b[15] as DPINT);
     t += (c[15] as DPINT) * (b[14] as DPINT);
     s = mask as SPINT;
-    t += (v14 as DPINT) << 26;
+    s += v13;
     t += s as DPINT;
-    c[13] = ((t as SPINT) & mask) as SPINT;
+    c[12] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     t += (c[15] as DPINT) * (b[15] as DPINT);
     s = mask as SPINT;
-    t += (v15 as DPINT) << 26;
+    s += v14;
+    t += s as DPINT;
+    c[13] = ((t as SPINT) & mask) as SPINT;
+    t >>= 28;
+    s = mask as SPINT;
+    s += v15;
     t += s as DPINT;
     c[14] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
-    t -= 1;
+    t += (v16 - 1) as DPINT;
     c[15] = t as SPINT;
     return;
 }
@@ -744,72 +629,42 @@ fn modsqr(c: &mut [SPINT]) {
     let mut t: UDPINT;
     let mut tot: UDPINT;
     let mut s: SPINT;
-    let p0 = 0xb5844f3 as SPINT;
-    let p1 = 0x78c292a as SPINT;
-    let p2 = 0x58f5523 as SPINT;
-    let p3 = 0xc2728dc as SPINT;
-    let p4 = 0x690216c as SPINT;
-    let p5 = 0x49aed63 as SPINT;
-    let p6 = 0x9c44edb as SPINT;
-    let p7 = 0x7cca23e as SPINT;
     let q = (1 as SPINT) << 28; // q is unsaturated radix
     let mask = (q - 1) as SPINT;
-    let ndash = 0xe918bc5 as SPINT;
     tot = (c[0] as UDPINT) * (c[0] as UDPINT);
     t = tot;
-    let v0 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v0 as UDPINT) * (p0 as UDPINT);
+    let v0 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[0] as UDPINT) * (c[1] as UDPINT);
     tot *= 2;
     t += tot;
-    t += (v0 as UDPINT) * (p1 as UDPINT);
-    let v1 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v1 as UDPINT) * (p0 as UDPINT);
+    let v1 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[0] as UDPINT) * (c[2] as UDPINT);
     tot *= 2;
     tot += (c[1] as UDPINT) * (c[1] as UDPINT);
     t += tot;
-    t += (v0 as UDPINT) * (p2 as UDPINT);
-    t += (v1 as UDPINT) * (p1 as UDPINT);
-    let v2 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v2 as UDPINT) * (p0 as UDPINT);
+    let v2 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[0] as UDPINT) * (c[3] as UDPINT);
     tot += (c[1] as UDPINT) * (c[2] as UDPINT);
     tot *= 2;
     t += tot;
-    t += (v0 as UDPINT) * (p3 as UDPINT);
-    t += (v1 as UDPINT) * (p2 as UDPINT);
-    t += (v2 as UDPINT) * (p1 as UDPINT);
-    let v3 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v3 as UDPINT) * (p0 as UDPINT);
+    let v3 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[0] as UDPINT) * (c[4] as UDPINT);
     tot += (c[1] as UDPINT) * (c[3] as UDPINT);
     tot *= 2;
     tot += (c[2] as UDPINT) * (c[2] as UDPINT);
     t += tot;
-    t += (v0 as UDPINT) * (p4 as UDPINT);
-    t += (v1 as UDPINT) * (p3 as UDPINT);
-    t += (v2 as UDPINT) * (p2 as UDPINT);
-    t += (v3 as UDPINT) * (p1 as UDPINT);
-    let v4 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v4 as UDPINT) * (p0 as UDPINT);
+    let v4 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[0] as UDPINT) * (c[5] as UDPINT);
     tot += (c[1] as UDPINT) * (c[4] as UDPINT);
     tot += (c[2] as UDPINT) * (c[3] as UDPINT);
     tot *= 2;
     t += tot;
-    t += (v0 as UDPINT) * (p5 as UDPINT);
-    t += (v1 as UDPINT) * (p4 as UDPINT);
-    t += (v2 as UDPINT) * (p3 as UDPINT);
-    t += (v3 as UDPINT) * (p2 as UDPINT);
-    t += (v4 as UDPINT) * (p1 as UDPINT);
-    let v5 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v5 as UDPINT) * (p0 as UDPINT);
+    let v5 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[0] as UDPINT) * (c[6] as UDPINT);
     tot += (c[1] as UDPINT) * (c[5] as UDPINT);
@@ -817,14 +672,7 @@ fn modsqr(c: &mut [SPINT]) {
     tot *= 2;
     tot += (c[3] as UDPINT) * (c[3] as UDPINT);
     t += tot;
-    t += (v0 as UDPINT) * (p6 as UDPINT);
-    t += (v1 as UDPINT) * (p5 as UDPINT);
-    t += (v2 as UDPINT) * (p4 as UDPINT);
-    t += (v3 as UDPINT) * (p3 as UDPINT);
-    t += (v4 as UDPINT) * (p2 as UDPINT);
-    t += (v5 as UDPINT) * (p1 as UDPINT);
-    let v6 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v6 as UDPINT) * (p0 as UDPINT);
+    let v6 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[0] as UDPINT) * (c[7] as UDPINT);
     tot += (c[1] as UDPINT) * (c[6] as UDPINT);
@@ -832,15 +680,7 @@ fn modsqr(c: &mut [SPINT]) {
     tot += (c[3] as UDPINT) * (c[4] as UDPINT);
     tot *= 2;
     t += tot;
-    t += (v0 as UDPINT) * (p7 as UDPINT);
-    t += (v1 as UDPINT) * (p6 as UDPINT);
-    t += (v2 as UDPINT) * (p5 as UDPINT);
-    t += (v3 as UDPINT) * (p4 as UDPINT);
-    t += (v4 as UDPINT) * (p3 as UDPINT);
-    t += (v5 as UDPINT) * (p2 as UDPINT);
-    t += (v6 as UDPINT) * (p1 as UDPINT);
-    let v7 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v7 as UDPINT) * (p0 as UDPINT);
+    let v7 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[0] as UDPINT) * (c[8] as UDPINT);
     tot += (c[1] as UDPINT) * (c[7] as UDPINT);
@@ -850,15 +690,7 @@ fn modsqr(c: &mut [SPINT]) {
     tot += (c[4] as UDPINT) * (c[4] as UDPINT);
     t += tot;
     t += (q - v0) as UDPINT;
-    t += (v1 as UDPINT) * (p7 as UDPINT);
-    t += (v2 as UDPINT) * (p6 as UDPINT);
-    t += (v3 as UDPINT) * (p5 as UDPINT);
-    t += (v4 as UDPINT) * (p4 as UDPINT);
-    t += (v5 as UDPINT) * (p3 as UDPINT);
-    t += (v6 as UDPINT) * (p2 as UDPINT);
-    t += (v7 as UDPINT) * (p1 as UDPINT);
-    let v8 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v8 as UDPINT) * (p0 as UDPINT);
+    let v8 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[0] as UDPINT) * (c[9] as UDPINT);
     tot += (c[1] as UDPINT) * (c[8] as UDPINT);
@@ -869,16 +701,8 @@ fn modsqr(c: &mut [SPINT]) {
     t += tot;
     s = mask as SPINT;
     s -= v1;
-    t += (v2 as UDPINT) * (p7 as UDPINT);
-    t += (v3 as UDPINT) * (p6 as UDPINT);
-    t += (v4 as UDPINT) * (p5 as UDPINT);
-    t += (v5 as UDPINT) * (p4 as UDPINT);
-    t += (v6 as UDPINT) * (p3 as UDPINT);
-    t += (v7 as UDPINT) * (p2 as UDPINT);
-    t += (v8 as UDPINT) * (p1 as UDPINT);
     t += s as UDPINT;
-    let v9 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v9 as UDPINT) * (p0 as UDPINT);
+    let v9 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[0] as UDPINT) * (c[10] as UDPINT);
     tot += (c[1] as UDPINT) * (c[9] as UDPINT);
@@ -890,16 +714,8 @@ fn modsqr(c: &mut [SPINT]) {
     t += tot;
     s = mask as SPINT;
     s -= v2;
-    t += (v3 as UDPINT) * (p7 as UDPINT);
-    t += (v4 as UDPINT) * (p6 as UDPINT);
-    t += (v5 as UDPINT) * (p5 as UDPINT);
-    t += (v6 as UDPINT) * (p4 as UDPINT);
-    t += (v7 as UDPINT) * (p3 as UDPINT);
-    t += (v8 as UDPINT) * (p2 as UDPINT);
-    t += (v9 as UDPINT) * (p1 as UDPINT);
     t += s as UDPINT;
-    let v10 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v10 as UDPINT) * (p0 as UDPINT);
+    let v10 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[0] as UDPINT) * (c[11] as UDPINT);
     tot += (c[1] as UDPINT) * (c[10] as UDPINT);
@@ -911,16 +727,8 @@ fn modsqr(c: &mut [SPINT]) {
     t += tot;
     s = mask as SPINT;
     s -= v3;
-    t += (v4 as UDPINT) * (p7 as UDPINT);
-    t += (v5 as UDPINT) * (p6 as UDPINT);
-    t += (v6 as UDPINT) * (p5 as UDPINT);
-    t += (v7 as UDPINT) * (p4 as UDPINT);
-    t += (v8 as UDPINT) * (p3 as UDPINT);
-    t += (v9 as UDPINT) * (p2 as UDPINT);
-    t += (v10 as UDPINT) * (p1 as UDPINT);
     t += s as UDPINT;
-    let v11 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v11 as UDPINT) * (p0 as UDPINT);
+    let v11 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[0] as UDPINT) * (c[12] as UDPINT);
     tot += (c[1] as UDPINT) * (c[11] as UDPINT);
@@ -933,16 +741,8 @@ fn modsqr(c: &mut [SPINT]) {
     t += tot;
     s = mask as SPINT;
     s -= v4;
-    t += (v5 as UDPINT) * (p7 as UDPINT);
-    t += (v6 as UDPINT) * (p6 as UDPINT);
-    t += (v7 as UDPINT) * (p5 as UDPINT);
-    t += (v8 as UDPINT) * (p4 as UDPINT);
-    t += (v9 as UDPINT) * (p3 as UDPINT);
-    t += (v10 as UDPINT) * (p2 as UDPINT);
-    t += (v11 as UDPINT) * (p1 as UDPINT);
     t += s as UDPINT;
-    let v12 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v12 as UDPINT) * (p0 as UDPINT);
+    let v12 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[0] as UDPINT) * (c[13] as UDPINT);
     tot += (c[1] as UDPINT) * (c[12] as UDPINT);
@@ -955,16 +755,8 @@ fn modsqr(c: &mut [SPINT]) {
     t += tot;
     s = mask as SPINT;
     s -= v5;
-    t += (v6 as UDPINT) * (p7 as UDPINT);
-    t += (v7 as UDPINT) * (p6 as UDPINT);
-    t += (v8 as UDPINT) * (p5 as UDPINT);
-    t += (v9 as UDPINT) * (p4 as UDPINT);
-    t += (v10 as UDPINT) * (p3 as UDPINT);
-    t += (v11 as UDPINT) * (p2 as UDPINT);
-    t += (v12 as UDPINT) * (p1 as UDPINT);
     t += s as UDPINT;
-    let v13 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v13 as UDPINT) * (p0 as UDPINT);
+    let v13 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[0] as UDPINT) * (c[14] as UDPINT);
     tot += (c[1] as UDPINT) * (c[13] as UDPINT);
@@ -978,16 +770,8 @@ fn modsqr(c: &mut [SPINT]) {
     t += tot;
     s = mask as SPINT;
     s -= v6;
-    t += (v7 as UDPINT) * (p7 as UDPINT);
-    t += (v8 as UDPINT) * (p6 as UDPINT);
-    t += (v9 as UDPINT) * (p5 as UDPINT);
-    t += (v10 as UDPINT) * (p4 as UDPINT);
-    t += (v11 as UDPINT) * (p3 as UDPINT);
-    t += (v12 as UDPINT) * (p2 as UDPINT);
-    t += (v13 as UDPINT) * (p1 as UDPINT);
     t += s as UDPINT;
-    let v14 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v14 as UDPINT) * (p0 as UDPINT);
+    let v14 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[0] as UDPINT) * (c[15] as UDPINT);
     tot += (c[1] as UDPINT) * (c[14] as UDPINT);
@@ -1000,18 +784,9 @@ fn modsqr(c: &mut [SPINT]) {
     tot *= 2;
     t += tot;
     s = mask as SPINT;
-    t += (v0 as UDPINT) << 26;
     s -= v7;
-    t += (v8 as UDPINT) * (p7 as UDPINT);
-    t += (v9 as UDPINT) * (p6 as UDPINT);
-    t += (v10 as UDPINT) * (p5 as UDPINT);
-    t += (v11 as UDPINT) * (p4 as UDPINT);
-    t += (v12 as UDPINT) * (p3 as UDPINT);
-    t += (v13 as UDPINT) * (p2 as UDPINT);
-    t += (v14 as UDPINT) * (p1 as UDPINT);
     t += s as UDPINT;
-    let v15 = (((t as SPINT) * ndash) & mask) as SPINT;
-    t += (v15 as UDPINT) * (p0 as UDPINT);
+    let v15 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[1] as UDPINT) * (c[15] as UDPINT);
     tot += (c[2] as UDPINT) * (c[14] as UDPINT);
@@ -1024,17 +799,10 @@ fn modsqr(c: &mut [SPINT]) {
     tot += (c[8] as UDPINT) * (c[8] as UDPINT);
     t += tot;
     s = mask as SPINT;
-    t += (v1 as UDPINT) << 26;
+    s += v0;
     s -= v8;
-    t += (v9 as UDPINT) * (p7 as UDPINT);
-    t += (v10 as UDPINT) * (p6 as UDPINT);
-    t += (v11 as UDPINT) * (p5 as UDPINT);
-    t += (v12 as UDPINT) * (p4 as UDPINT);
-    t += (v13 as UDPINT) * (p3 as UDPINT);
-    t += (v14 as UDPINT) * (p2 as UDPINT);
-    t += (v15 as UDPINT) * (p1 as UDPINT);
     t += s as UDPINT;
-    c[0] = ((t as SPINT) & mask) as SPINT;
+    let v16 = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[2] as UDPINT) * (c[15] as UDPINT);
     tot += (c[3] as UDPINT) * (c[14] as UDPINT);
@@ -1046,16 +814,10 @@ fn modsqr(c: &mut [SPINT]) {
     tot *= 2;
     t += tot;
     s = mask as SPINT;
-    t += (v2 as UDPINT) << 26;
+    s += v1;
     s -= v9;
-    t += (v10 as UDPINT) * (p7 as UDPINT);
-    t += (v11 as UDPINT) * (p6 as UDPINT);
-    t += (v12 as UDPINT) * (p5 as UDPINT);
-    t += (v13 as UDPINT) * (p4 as UDPINT);
-    t += (v14 as UDPINT) * (p3 as UDPINT);
-    t += (v15 as UDPINT) * (p2 as UDPINT);
     t += s as UDPINT;
-    c[1] = ((t as SPINT) & mask) as SPINT;
+    c[0] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[3] as UDPINT) * (c[15] as UDPINT);
     tot += (c[4] as UDPINT) * (c[14] as UDPINT);
@@ -1067,15 +829,10 @@ fn modsqr(c: &mut [SPINT]) {
     tot += (c[9] as UDPINT) * (c[9] as UDPINT);
     t += tot;
     s = mask as SPINT;
-    t += (v3 as UDPINT) << 26;
+    s += v2;
     s -= v10;
-    t += (v11 as UDPINT) * (p7 as UDPINT);
-    t += (v12 as UDPINT) * (p6 as UDPINT);
-    t += (v13 as UDPINT) * (p5 as UDPINT);
-    t += (v14 as UDPINT) * (p4 as UDPINT);
-    t += (v15 as UDPINT) * (p3 as UDPINT);
     t += s as UDPINT;
-    c[2] = ((t as SPINT) & mask) as SPINT;
+    c[1] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[4] as UDPINT) * (c[15] as UDPINT);
     tot += (c[5] as UDPINT) * (c[14] as UDPINT);
@@ -1086,14 +843,10 @@ fn modsqr(c: &mut [SPINT]) {
     tot *= 2;
     t += tot;
     s = mask as SPINT;
-    t += (v4 as UDPINT) << 26;
+    s += v3;
     s -= v11;
-    t += (v12 as UDPINT) * (p7 as UDPINT);
-    t += (v13 as UDPINT) * (p6 as UDPINT);
-    t += (v14 as UDPINT) * (p5 as UDPINT);
-    t += (v15 as UDPINT) * (p4 as UDPINT);
     t += s as UDPINT;
-    c[3] = ((t as SPINT) & mask) as SPINT;
+    c[2] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[5] as UDPINT) * (c[15] as UDPINT);
     tot += (c[6] as UDPINT) * (c[14] as UDPINT);
@@ -1104,13 +857,10 @@ fn modsqr(c: &mut [SPINT]) {
     tot += (c[10] as UDPINT) * (c[10] as UDPINT);
     t += tot;
     s = mask as SPINT;
-    t += (v5 as UDPINT) << 26;
+    s += v4;
     s -= v12;
-    t += (v13 as UDPINT) * (p7 as UDPINT);
-    t += (v14 as UDPINT) * (p6 as UDPINT);
-    t += (v15 as UDPINT) * (p5 as UDPINT);
     t += s as UDPINT;
-    c[4] = ((t as SPINT) & mask) as SPINT;
+    c[3] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[6] as UDPINT) * (c[15] as UDPINT);
     tot += (c[7] as UDPINT) * (c[14] as UDPINT);
@@ -1120,12 +870,10 @@ fn modsqr(c: &mut [SPINT]) {
     tot *= 2;
     t += tot;
     s = mask as SPINT;
-    t += (v6 as UDPINT) << 26;
+    s += v5;
     s -= v13;
-    t += (v14 as UDPINT) * (p7 as UDPINT);
-    t += (v15 as UDPINT) * (p6 as UDPINT);
     t += s as UDPINT;
-    c[5] = ((t as SPINT) & mask) as SPINT;
+    c[4] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[7] as UDPINT) * (c[15] as UDPINT);
     tot += (c[8] as UDPINT) * (c[14] as UDPINT);
@@ -1135,11 +883,10 @@ fn modsqr(c: &mut [SPINT]) {
     tot += (c[11] as UDPINT) * (c[11] as UDPINT);
     t += tot;
     s = mask as SPINT;
-    t += (v7 as UDPINT) << 26;
+    s += v6;
     s -= v14;
-    t += (v15 as UDPINT) * (p7 as UDPINT);
     t += s as UDPINT;
-    c[6] = ((t as SPINT) & mask) as SPINT;
+    c[5] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[8] as UDPINT) * (c[15] as UDPINT);
     tot += (c[9] as UDPINT) * (c[14] as UDPINT);
@@ -1148,10 +895,10 @@ fn modsqr(c: &mut [SPINT]) {
     tot *= 2;
     t += tot;
     s = mask as SPINT;
-    t += (v8 as UDPINT) << 26;
+    s += v7;
     s -= v15;
     t += s as UDPINT;
-    c[7] = ((t as SPINT) & mask) as SPINT;
+    c[6] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[9] as UDPINT) * (c[15] as UDPINT);
     tot += (c[10] as UDPINT) * (c[14] as UDPINT);
@@ -1160,9 +907,10 @@ fn modsqr(c: &mut [SPINT]) {
     tot += (c[12] as UDPINT) * (c[12] as UDPINT);
     t += tot;
     s = mask as SPINT;
-    t += (v9 as UDPINT) << 26;
+    s += v8;
+    s -= v16;
     t += s as UDPINT;
-    c[8] = ((t as SPINT) & mask) as SPINT;
+    c[7] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[10] as UDPINT) * (c[15] as UDPINT);
     tot += (c[11] as UDPINT) * (c[14] as UDPINT);
@@ -1170,9 +918,9 @@ fn modsqr(c: &mut [SPINT]) {
     tot *= 2;
     t += tot;
     s = mask as SPINT;
-    t += (v10 as UDPINT) << 26;
+    s += v9;
     t += s as UDPINT;
-    c[9] = ((t as SPINT) & mask) as SPINT;
+    c[8] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[11] as UDPINT) * (c[15] as UDPINT);
     tot += (c[12] as UDPINT) * (c[14] as UDPINT);
@@ -1180,44 +928,49 @@ fn modsqr(c: &mut [SPINT]) {
     tot += (c[13] as UDPINT) * (c[13] as UDPINT);
     t += tot;
     s = mask as SPINT;
-    t += (v11 as UDPINT) << 26;
+    s += v10;
     t += s as UDPINT;
-    c[10] = ((t as SPINT) & mask) as SPINT;
+    c[9] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[12] as UDPINT) * (c[15] as UDPINT);
     tot += (c[13] as UDPINT) * (c[14] as UDPINT);
     tot *= 2;
     t += tot;
     s = mask as SPINT;
-    t += (v12 as UDPINT) << 26;
+    s += v11;
     t += s as UDPINT;
-    c[11] = ((t as SPINT) & mask) as SPINT;
+    c[10] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[13] as UDPINT) * (c[15] as UDPINT);
     tot *= 2;
     tot += (c[14] as UDPINT) * (c[14] as UDPINT);
     t += tot;
     s = mask as SPINT;
-    t += (v13 as UDPINT) << 26;
+    s += v12;
     t += s as UDPINT;
-    c[12] = ((t as SPINT) & mask) as SPINT;
+    c[11] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[14] as UDPINT) * (c[15] as UDPINT);
     tot *= 2;
     t += tot;
     s = mask as SPINT;
-    t += (v14 as UDPINT) << 26;
+    s += v13;
     t += s as UDPINT;
-    c[13] = ((t as SPINT) & mask) as SPINT;
+    c[12] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
     tot = (c[15] as UDPINT) * (c[15] as UDPINT);
     t += tot;
     s = mask as SPINT;
-    t += (v15 as UDPINT) << 26;
+    s += v14;
+    t += s as UDPINT;
+    c[13] = ((t as SPINT) & mask) as SPINT;
+    t >>= 28;
+    s = mask as SPINT;
+    s += v15;
     t += s as UDPINT;
     c[14] = ((t as SPINT) & mask) as SPINT;
     t >>= 28;
-    t -= 1;
+    t += (v16 - 1) as UDPINT;
     c[15] = t as SPINT;
     return;
 }
@@ -1243,153 +996,39 @@ fn modpro(w: &[SPINT], r: &mut [SPINT]) {
     let mut z: [SPINT; 16] = [0; 16];
     let mut t0: [SPINT; 16] = [0; 16];
     let mut t1: [SPINT; 16] = [0; 16];
-    let mut t2: [SPINT; 16] = [0; 16];
-    let mut t3: [SPINT; 16] = [0; 16];
-    let mut t4: [SPINT; 16] = [0; 16];
-    let mut t5: [SPINT; 16] = [0; 16];
-    let mut t6: [SPINT; 16] = [0; 16];
-    let mut t7: [SPINT; 16] = [0; 16];
-    let mut t8: [SPINT; 16] = [0; 16];
-    let mut t9: [SPINT; 16] = [0; 16];
-    let mut t10: [SPINT; 16] = [0; 16];
-    let mut t11: [SPINT; 16] = [0; 16];
-    let mut t12: [SPINT; 16] = [0; 16];
-    let mut t13: [SPINT; 16] = [0; 16];
-    let mut t14: [SPINT; 16] = [0; 16];
-    let mut t15: [SPINT; 16] = [0; 16];
     modcpy(w, &mut x);
-    modcpy(&x, &mut t12);
-    modsqr(&mut t12);
-    modcpy(&x, &mut t1);
-    modmul(&t12, &mut t1);
     modcpy(&x, &mut z);
-    modmul(&t1, &mut z);
-    modcpy(&x, &mut t5);
-    modmul(&z, &mut t5);
-    modcpy(&z, &mut t4);
-    modmul(&t5, &mut t4);
-    modcpy(&t12, &mut t7);
-    modmul(&t4, &mut t7);
-    modcpy(&t12, &mut t2);
-    modmul(&t7, &mut t2);
-    modcpy(&t12, &mut z);
-    modmul(&t2, &mut z);
-    modcpy(&t12, &mut t0);
-    modmul(&z, &mut t0);
-    modcpy(&t12, &mut t9);
-    modmul(&t0, &mut t9);
-    modcpy(&t12, &mut t3);
-    modmul(&t9, &mut t3);
-    modcpy(&t12, &mut t8);
-    modmul(&t3, &mut t8);
-    modcpy(&t12, &mut t10);
-    modmul(&t8, &mut t10);
-    modcpy(&t12, &mut t6);
-    modmul(&t10, &mut t6);
-    modcpy(&t12, &mut t11);
-    modmul(&t6, &mut t11);
-    modmul(&t11, &mut t12);
-    modcpy(&t12, &mut t14);
-    modsqr(&mut t14);
-    modcpy(&t14, &mut t13);
-    modsqr(&mut t13);
-    modcpy(&t13, &mut t15);
-    modnsqr(&mut t15, 5);
-    modmul(&t15, &mut t13);
-    modcpy(&t13, &mut t15);
-    modnsqr(&mut t15, 4);
-    modmul(&t14, &mut t15);
-    modnsqr(&mut t15, 11);
-    modmul(&t15, &mut t13);
-    modcpy(&t13, &mut t15);
-    modnsqr(&mut t15, 4);
-    modmul(&t15, &mut t14);
-    modnsqr(&mut t14, 26);
-    modmul(&t14, &mut t13);
-    modcpy(&t13, &mut t14);
-    modnsqr(&mut t14, 55);
-    modmul(&t14, &mut t13);
-    modcpy(&t13, &mut t14);
-    modnsqr(&mut t14, 110);
-    modmul(&t14, &mut t13);
-    modmul(&t1, &mut t13);
-    modnsqr(&mut t13, 6);
-    modmul(&t12, &mut t13);
-    modnsqr(&mut t13, 7);
-    modmul(&t10, &mut t13);
-    modnsqr(&mut t13, 6);
-    modmul(&t0, &mut t13);
-    modnsqr(&mut t13, 8);
-    modmul(&t13, &mut t12);
-    modnsqr(&mut t12, 6);
-    modmul(&t9, &mut t12);
-    modnsqr(&mut t12, 5);
-    modmul(&t0, &mut t12);
-    modnsqr(&mut t12, 8);
-    modmul(&t9, &mut t12);
-    modnsqr(&mut t12, 4);
-    modmul(&t7, &mut t12);
-    modnsqr(&mut t12, 6);
-    modmul(&t6, &mut t12);
-    modnsqr(&mut t12, 5);
-    modmul(&t4, &mut t12);
-    modnsqr(&mut t12, 6);
-    modmul(&t2, &mut t12);
-    modnsqr(&mut t12, 6);
-    modmul(&t12, &mut t11);
-    modnsqr(&mut t11, 5);
-    modmul(&t3, &mut t11);
-    modnsqr(&mut t11, 5);
-    modmul(&t0, &mut t11);
-    modnsqr(&mut t11, 4);
-    modmul(&t7, &mut t11);
-    modnsqr(&mut t11, 5);
-    modmul(&t4, &mut t11);
-    modnsqr(&mut t11, 7);
-    modmul(&x, &mut t11);
-    modnsqr(&mut t11, 8);
-    modmul(&t7, &mut t11);
-    modnsqr(&mut t11, 6);
-    modmul(&t11, &mut t10);
-    modsqr(&mut t10);
-    modmul(&x, &mut t10);
-    modnsqr(&mut t10, 9);
-    modmul(&t10, &mut t9);
-    modnsqr(&mut t9, 4);
-    modmul(&t4, &mut t9);
-    modnsqr(&mut t9, 6);
-    modmul(&t0, &mut t9);
-    modnsqr(&mut t9, 5);
-    modmul(&t9, &mut t8);
-    modnsqr(&mut t8, 7);
-    modmul(&t8, &mut t7);
-    modnsqr(&mut t7, 7);
-    modmul(&z, &mut t7);
-    modnsqr(&mut t7, 6);
-    modmul(&t3, &mut t7);
-    modnsqr(&mut t7, 5);
-    modmul(&t4, &mut t7);
-    modnsqr(&mut t7, 8);
-    modmul(&t7, &mut t6);
-    modnsqr(&mut t6, 2);
-    modmul(&t1, &mut t6);
-    modnsqr(&mut t6, 5);
-    modmul(&t1, &mut t6);
-    modnsqr(&mut t6, 7);
-    modmul(&t6, &mut t5);
-    modnsqr(&mut t5, 6);
-    modmul(&t5, &mut t4);
-    modnsqr(&mut t4, 6);
-    modmul(&t4, &mut t3);
-    modnsqr(&mut t3, 5);
-    modmul(&t3, &mut t2);
-    modnsqr(&mut t2, 3);
-    modmul(&t2, &mut t1);
-    modnsqr(&mut t1, 9);
-    modmul(&t1, &mut t0);
-    modnsqr(&mut t0, 6);
+    modsqr(&mut z);
+    modmul(&x, &mut z);
+    modsqr(&mut z);
+    modmul(&x, &mut z);
+    modcpy(&z, &mut t0);
+    modnsqr(&mut t0, 3);
     modmul(&t0, &mut z);
-    modnsqr(&mut z, 2);
+    modcpy(&z, &mut t0);
+    modnsqr(&mut t0, 6);
+    modmul(&z, &mut t0);
+    modcpy(&t0, &mut t1);
+    modnsqr(&mut t1, 12);
+    modmul(&t1, &mut t0);
+    modcpy(&t0, &mut t1);
+    modnsqr(&mut t1, 6);
+    modmul(&t1, &mut z);
+    modnsqr(&mut t1, 18);
+    modmul(&t1, &mut t0);
+    modcpy(&t0, &mut t1);
+    modnsqr(&mut t1, 48);
+    modmul(&t1, &mut t0);
+    modcpy(&t0, &mut t1);
+    modnsqr(&mut t1, 96);
+    modmul(&t1, &mut t0);
+    modnsqr(&mut t0, 30);
+    modmul(&t0, &mut z);
+    modcpy(&z, &mut t0);
+    modsqr(&mut t0);
+    modmul(&x, &mut t0);
+    modnsqr(&mut t0, 223);
+    modmul(&t0, &mut z);
     modcpy(&z, r);
     return;
 }
@@ -1413,8 +1052,7 @@ fn modinv(h: Option<&[SPINT]>, z: &mut [SPINT]) {
 //Convert n to n-residue form, n=nres(m)
 fn nres(n: &mut [SPINT]) {
     let c: [SPINT; 16] = [
-        0x49b9b60, 0x5392570, 0x195d9e3, 0x2c4bc1b, 0x8597af3, 0x2388ea1, 0x80d66de, 0x5ee4d83,
-        0xe17cf72, 0xc47c44a, 0xcc14ba3, 0x70af1a9, 0xcb7e4d0, 0x292052b, 0x9f823b7, 0x3402a93,
+        0x0, 0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3, 0x0, 0x0, 0x0, 0x0, 0x0,
     ];
     modmul(&c, n);
     return;
@@ -1639,260 +1277,514 @@ fn modcmp(a: &[SPINT], b: &[SPINT]) -> bool {
 
 const NLIMBS: usize = 16;
 const RADIX: usize = 28;
-const NBITS: usize = 446;
+const NBITS: usize = 448;
 const NBYTES: usize = 56;
 
 const MERSENNE: bool = false;
 const MONTGOMERY: bool = true;
 
-const MULBYINT: bool = false;
+const MULBYINT: bool = true;
+
+
+/*** Insert automatically generated definition for curve curve.rs here ***/
+
+
+const COF:usize = 2;
+const CONSTANT_A: isize = 1;
+const CONSTANT_B: isize = -39081;
+const constant_b: [SPINT;16]=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+const CONSTANT_X: usize = 0;
+const constant_x: [SPINT;16]=[0x420685f,0x17aa383,0x35bf93b,0x4f8fe6d,0xb7bc291,0xab765fa,0xe44cd37,0xa7e9b28,0x34f39b1,0xbe886a8,0x44d6fb9,0x95e6eb4,0xee96c72,0x5d88b9,0xd16ef09,0xea8836];
+const constant_y: [SPINT;16]=[0xd81f4fb,0x9a99632,0xac119c7,0x23c2104,0xda8e9ac,0x9fc5486,0x416ef25,0x8a98abb,0x46ff58f,0x1223251,0x4fa9dd0,0xcaf9471,0xa1f0e6a,0xa33ab50,0x65f7687,0xa184177];
+
+
 
 /*** End of automatically generated code ***/
 
-// number of limbs and bytes in representation
-pub const BYTES:usize = NBYTES;
-const LIMBS:usize= NLIMBS;
-type GEL = [SPINT; LIMBS];
 
+/*** Insert automatically generated point definition point.rs here ***/
 
-
-// reduce 114 byte array h to integer r modulo group order q, in constant time
-// Consider h as 2^440.(2^440 + y) + z, where x,y and z < q (z is bottom 55 bytes, y is next 55 bytes, x is top 4 bytes)
-// Important that x,y and z < q, 55 bytes = 440 bits, q is 446 bits
-fn reduce(h:&[u8],r:&mut [SPINT]) {
-    let mut buff:[u8;BYTES]=[0;BYTES];    
-    let mut x:GEL=[0;LIMBS];
-    let mut y:GEL=[0;LIMBS];
-    let mut z:GEL=[0;LIMBS];
-    let mut c:GEL=[0;LIMBS];
-
-    mod2r(8*(BYTES-1),&mut c);
-
-    for i in 0..55 {  // bottom 55 bytes
-        buff[i]=h[i];
-    }
-    buff[55]=0;
-    buff.reverse();
-    modimp(&buff,&mut z);
-
-    for i in 0..55 { // middle 55 bytes
-        buff[i]=h[i+55];
-    }
-    buff[55]=0;
-    buff.reverse();
-    modimp(&buff,&mut y);
-
-
-    for i in 0..4 {
-        buff[i]=h[110+i];
-    }
-    for i in 4..56 {
-        buff[i]=0;
-    }
-    buff.reverse();
-    modimp(&buff,&mut x);
-
-    modmul(&c,&mut x);
-    modadd(&y,&mut x);
-    modmul(&c,&mut x);
-    modadd(&z,&mut x);
-    modcpy(&x,r);
+// elliptic curve point in projective coordinates
+const WORDLENGTH: usize = 32;
+#[derive(Clone)]
+pub struct ECP {
+	x: [u32;16],
+	y: [u32;16],
+	z: [u32;16],
 }
 
-// general purpose SHAKE256 hash function
-// Input ilen bytes, output olen bytes
-fn H(ilen:usize,olen:usize,s:&[u8],digest: &mut [u8])
-{
-    let mut sha3=SHA3::new(SHAKE256);
-    for i in 0..ilen { 
-        sha3.process(s[i]);
-    }
-    sha3.shake(digest,olen); 
+#[allow(non_snake_case)]
+impl ECP {
+	pub fn new() -> ECP {
+		ECP {
+			x: [0;16],
+			y: [0;16],
+			z: [0;16],
+		}
+	}
 }
 
-// Input private key - 57 random bytes
-// Output public key - 57 bytes
-pub fn KEY_PAIR(prv: &[u8],public: &mut [u8]) {
-    let mut P=ECP::new();
-    ecngen(&mut P);
-    let mut s:[u8;BYTES]=[0;BYTES]; 
 
-    H(BYTES+1,BYTES,&prv,&mut s);
-// clamp s
-    s[0]&=0xFC;
-    s[55]|=0x80;
+/*** End of automatically generated code ***/
 
-    s.reverse(); // little endian to big endian
- 
-    ecnmul(&s,&mut P); 
-
-    let sign=ecnget(&mut P,None,Some(&mut s));  // get y coordinate and sign
-    s.reverse(); // big endian to little endian
-    for i in 0..56 {
-        public[i]=s[i];
-    }
-             
-    public[56]=(sign<<7) as u8;
+fn teq(b: usize,c: usize) -> usize {
+    let mut x=b^c;
+    x-=1;
+    return (x>>(usize::BITS-1))&1;
 }
 
-const dom4:[u8;10]=[b'S',b'i',b'g',b'E',b'd',b'4',b'4',b'8',0,0];
+pub fn ecncpy(Q: &ECP,P: &mut ECP) {
+    modcpy(&Q.x,&mut P.x);
+    modcpy(&Q.y,&mut P.y);
+    modcpy(&Q.z,&mut P.z);
+}
 
-// input private key, public key, message to be signed. Output signature
-pub fn SIGN(prv:&[u8],public: Option<&[u8]>,m:&[u8],sig:&mut [u8]) {
-    let mut h:[u8;2*BYTES+2]=[0;2*BYTES+2];  
-    let mut ipub:[u8;BYTES+1]=[0;BYTES+1];
-    let mut sh:[u8;BYTES]=[0;BYTES];
-    let mut s:GEL=[0;LIMBS];
-    let mut r:GEL=[0;LIMBS];
-    let mut d:GEL=[0;LIMBS];
+pub fn ecnneg(P: &mut ECP) {
+    modneg(&mut P.x);
+}
 
-    let mut sha3=SHA3::new(SHAKE256);
+// add Q to P
+// standard projective method from EFD - https://www.hyperelliptic.org/EFD/
+pub fn ecnadd(Q: &ECP,P: &mut ECP) {
+    let mut a:[SPINT;NLIMBS]=[0;NLIMBS];   
+    let mut b:[SPINT;NLIMBS]=[0;NLIMBS];     
+    let mut c:[SPINT;NLIMBS]=[0;NLIMBS];   
+    let mut d:[SPINT;NLIMBS]=[0;NLIMBS];   
+    let mut e:[SPINT;NLIMBS]=[0;NLIMBS];   
+    let mut f:[SPINT;NLIMBS]=[0;NLIMBS];   
+    let mut g:[SPINT;NLIMBS]=[0;NLIMBS]; 
 
-    let mut R=ECP::new();
-    ecngen(&mut R);
-
-    if let Some(pb) = public {
-        for i in 0..BYTES+1 {
-            ipub[i]=pb[i];
-        }
+    modcpy(&Q.z,&mut a); modmul(&P.z,&mut a);
+    modcpy(&a,&mut b); modsqr(&mut b);
+    modcpy(&Q.x,&mut c); modmul(&P.x,&mut c);
+    modcpy(&Q.y,&mut d); modmul(&P.y,&mut d);
+    modcpy(&c,&mut e); modmul(&d,&mut e);
+    if CONSTANT_B>0 {
+        modmli(CONSTANT_B as usize,&mut e);
+        modcpy(&b, &mut f); modsub(&e,&mut f);
+        modcpy(&b, &mut g); modadd(&e,&mut g);
+    }
+    if CONSTANT_B<0 {
+        modmli(-CONSTANT_B as usize,&mut e);
+        modcpy(&b, &mut f); modadd(&e,&mut f);
+        modcpy(&b, &mut g); modsub(&e,&mut g);
+    }
+    if CONSTANT_B==0 {
+        modmul(&constant_b,&mut e);
+        modcpy(&b, &mut f); modsub(&e,&mut f);
+        modcpy(&b, &mut g); modadd(&e,&mut g);
+    }
+    modcpy(&P.x,&mut b); modadd(&P.y,&mut b);
+    modcpy(&Q.x,&mut e); modadd(&Q.y,&mut e);
+    modcpy(&b,&mut P.x); modmul(&e,&mut P.x);
+    modsub(&c,&mut P.x);
+    modsub(&d,&mut P.x);
+    modmul(&f,&mut P.x);
+    modmul(&a,&mut P.x);
+    if CONSTANT_A == -1 {
+        modcpy(&d,&mut P.y); modadd(&c,&mut P.y);
     } else {
-        KEY_PAIR(prv,&mut ipub);
+        modcpy(&d,&mut P.y); modsub(&c,&mut P.y);
     }
+    modmul(&a,&mut P.y);
+    modmul(&g,&mut P.y);
+    modcpy(&f,&mut P.z); modmul(&g,&mut P.z);
+}
 
-    H(BYTES+1,2*BYTES+2,&prv,&mut h);
+pub fn ecnsub(Q: &ECP,P: &mut ECP) {
+    let mut W = ECP::new();  
+    ecncpy(Q,&mut W); ecnneg(&mut W);
+    ecnadd(&W,P);
+}
 
-    for i in 0..BYTES {
-        sh[i]=h[i];
+// double P
+// standard projective method from EFD - https://www.hyperelliptic.org/EFD/
+pub fn ecndbl(P: &mut ECP) {
+    let mut b:[SPINT;NLIMBS]=[0;NLIMBS];     
+    let mut c:[SPINT;NLIMBS]=[0;NLIMBS];   
+    let mut d:[SPINT;NLIMBS]=[0;NLIMBS];   
+    let mut e:[SPINT;NLIMBS]=[0;NLIMBS];   
+    let mut f:[SPINT;NLIMBS]=[0;NLIMBS];   
+    let mut h:[SPINT;NLIMBS]=[0;NLIMBS];  
+    let mut j:[SPINT;NLIMBS]=[0;NLIMBS];    
+
+    modcpy(&P.x,&mut b); modadd(&P.y,&mut b);
+    modsqr(&mut b);
+    modcpy(&P.x,&mut c); modsqr(&mut c);
+    modcpy(&P.y,&mut d); modsqr(&mut d);
+    modcpy(&P.z,&mut h); modsqr(&mut h);
+    modcpy(&h,&mut j); modadd(&j,&mut h);
+    modcpy(&c,&mut e);
+
+    if CONSTANT_A == -1 {
+        modneg(&mut e);
+    } 
+    modcpy(&e,&mut f); modadd(&d,&mut f);
+    modcpy(&f,&mut j); modsub(&h,&mut j);
+    modcpy(&b,&mut P.x); modsub(&c,&mut P.x);
+    modsub(&d,&mut P.x);
+    modmul(&j,&mut P.x);
+    modcpy(&e,&mut P.y); modsub(&d,&mut P.y);
+    modmul(&f,&mut P.y);
+    modcpy(&f,&mut P.z); modmul(&j,&mut P.z);
+}
+
+// set to infinity
+pub fn ecninf(P: &mut ECP) {
+    modzer(&mut P.x);
+    modone(&mut P.y);
+    modone(&mut P.z);
+}
+
+// test for infinity
+pub fn ecnisinf(P: &ECP) -> bool {
+    return modis0(&P.x) && modcmp(&P.y,&P.z);
+}
+
+// set to affine
+pub fn ecnaffine(P: &mut ECP) {
+    let mut i:[SPINT;NLIMBS]=[0;NLIMBS]; 
+    if modis0(&P.z) {
+        ecninf(P);
+        return;
     }
+    modcpy(&P.z,&mut i); modinv(None,&mut i);
+    modone(&mut P.z);
+    modmul(&i,&mut P.x);
+    modmul(&i,&mut P.y);
+}
 
-// derive and clamp s
-    sh[0]&=0xFC;
-    sh[55]|=0x80;
-    sh.reverse();
-    modimp(&sh,&mut s);
+// move Q to P if d=1
+fn ecncmv(d: usize,Q: &ECP,P: &mut ECP) {
+    modcmv(d,&Q.x,&mut P.x);
+    modcmv(d,&Q.y,&mut P.y);
+    modcmv(d,&Q.z,&mut P.z);
+}
+
+// return 1 if equal, else 0
+pub fn ecncmp(Q: &ECP,P: &ECP) -> bool {
+    let mut a:[SPINT;NLIMBS]=[0;NLIMBS];   
+    let mut b:[SPINT;NLIMBS]=[0;NLIMBS];  
+    modcpy(&P.x,&mut a); modmul(&Q.z,&mut a);
+    modcpy(&Q.x,&mut b); modmul(&P.z,&mut b);
+    if !modcmp(&a,&b) {
+        return false;
+    }
+    modcpy(&P.y,&mut a); modmul(&Q.z,&mut a);
+    modcpy(&Q.y,&mut b); modmul(&P.z,&mut b);
+    if !modcmp(&a,&b) {
+        return false;
+    }
+    return true;
+}
+
+// extract (x,y) from point, if y is NULL compress and just return x and sign of y, if x is NULL compress and just return y and sign of x
+pub fn ecnget(P: &mut ECP,x: Option<&mut [u8]>,y: Option<&mut [u8]>) -> usize {
+    let mut sx:[SPINT;NLIMBS]=[0;NLIMBS];  
+    let mut sy:[SPINT;NLIMBS]=[0;NLIMBS]; 
+    let mut ynull:bool=false;
+    let mut xnull:bool=false;
+    ecnaffine(P);
+    if let Some(rx) = x {
+        modcpy(&P.x,&mut sx);
+        modexp(&sx,rx);
+    } else {
+        xnull=true;
+    }
+    if let Some(ry) = y {
+        modcpy(&P.y,&mut sy);
+        modexp(&sy,ry);
+    } else {
+        ynull=true;
+    }
+    if ynull {
+        return modsign(&P.y);
+    }
+    if xnull {
+        return modsign(&P.x);
+    }
+    return 0;
+}
+
+// general purpose set point function
+// sets P=O if point not on curve
+// if x and y are not NULL tries to set (x,y)
+// if y==NULL tries to set from x and sign s of y (decompression)
+// if x==NULL tries to set from y and sign s of x
+
+fn setxy(s: usize,x: Option<&[SPINT]>,y: Option<&[SPINT]>,P: &mut ECP) {
+    let mut sx:[SPINT;NLIMBS]=[0;NLIMBS];     
+    let mut sy:[SPINT;NLIMBS]=[0;NLIMBS];   
+    let mut o:[SPINT;NLIMBS]=[0;NLIMBS];   
+    let mut u:[SPINT;NLIMBS]=[0;NLIMBS];   
+    let mut v:[SPINT;NLIMBS]=[0;NLIMBS];   
+    let mut h:[SPINT;NLIMBS]=[0;NLIMBS];  
+    modone(&mut o);
+    if let Some(ry)=y {
+        if let Some(rx)=x {
+            modcpy(&rx,&mut sx); modsqr(&mut sx);
+            modcpy(&ry,&mut sy); modsqr(&mut sy);
+            if CONSTANT_A == -1 {
+                modcpy(&sy,&mut u); modsub(&sx,&mut u);
+            } else {
+                modcpy(&sy,&mut u); modadd(&sx,&mut u);
+            }
+            modcpy(&sx,&mut v); modmul(&sy,&mut v);
+            if CONSTANT_B>0 {
+                modmli(CONSTANT_B as usize,&mut v);
+                modadd(&o,&mut v);
+            }
+            if CONSTANT_B<0 {
+                modmli(-CONSTANT_B as usize,&mut v);
+                modsub(&o,&mut v); modneg(&mut v);
+            }
+            if CONSTANT_B==0 {
+                modmul(&constant_b,&mut v);
+                modadd(&o,&mut v);
+            }
+            modmul(&o,&mut u); modmul(&o,&mut v); 
+            if modcmp(&u,&v) {
+                modcpy(&rx,&mut P.x);
+                modcpy(&ry,&mut P.y);
+                modone(&mut P.z);
+            } else {
+                ecninf(P);
+            }
+            return;
+        }
+    }  
+
+    if let Some(rx)=x {
+        modcpy(&rx,&mut sx); modsqr(&mut sx);
+        if CONSTANT_A == -1 {
+            modcpy(&o,&mut u); modadd(&sx, &mut u);
+        } else {
+            modcpy(&o,&mut u); modsub(&sx, &mut u); 
+        }
+        modcpy(&sx,&mut v);
+    }
+    if let Some(ry)=y {        
+        modcpy(&ry,&mut sy); modsqr(&mut sy);
+        modcpy(&o,&mut u); modsub(&sy,&mut u);
+        if CONSTANT_A == -1 {
+            modneg(&mut o);
+        } 
+        modcpy(&sy,&mut v);
+    }
+    if CONSTANT_B>0 {
+        modmli(CONSTANT_B as usize,&mut v);
+        modsub(&o,&mut v); modneg(&mut v);
+    }
+    if CONSTANT_B<0 {
+        modmli(-CONSTANT_B as usize,&mut v);
+        modadd(&o,&mut v);
+    }
+    if CONSTANT_B==0 {
+        modmul(&constant_b,&mut v);
+        modsub(&o,&mut v); modneg(&mut v);
+    }
+    modcpy(&u,&mut o); modsqr(&mut o);
+    modmul(&o,&mut u);
+    modmul(&v,&mut u);
+    modpro(&u,&mut h);
+    if !modqr(Some(&h),&u) {
+        ecninf(P);
+        return;
+    }
+    modsqrt(&u,Some(&h),&mut v);
+    modinv(Some(&h),&mut u);
+    modmul(&v, &mut u);
+    modmul(&o, &mut u);
+    let d=(modsign(&u)-s)&1;
+    modcpy(&u, &mut v); modneg(&mut v);
+    modcmv(d,&v, &mut u);
+
+    if let Some(rx)=x {
+        modcpy(&u, &mut P.y);
+        modcpy(&rx,&mut P.x);
+    }
+    if let Some(ry)=y {
+        modcpy(&u, &mut P.x);
+        modcpy(&ry,&mut P.y);
+    }
+    modone(&mut P.z);
+}
+
+// multiply point by small curve cofactor (here assumed to be 4 or 8)
+pub fn ecncof(P: &mut ECP) {
+    for _ in 0..COF {
+        ecndbl(P);
+    }
+}
+
+// Is (x,y) of the right order? Must be checked by calling program!
+// api visible version, x and y are big endian byte arrays
+pub fn ecnset(s: usize,x: Option<&[u8]>,y: Option<&[u8]>,P: &mut ECP) {
+    let mut sx:[SPINT;NLIMBS]=[0;NLIMBS];     
+    let mut sy:[SPINT;NLIMBS]=[0;NLIMBS];  
+    if let Some(ry)=y {
+        if let Some(rx)=x {
+            modimp(&rx,&mut sx);
+            modimp(&ry,&mut sy);
+            setxy(s,Some(&sx),Some(&sy),P);
+            return;
+        }
+    }
+    if let Some(rx)=x {
+        modimp(rx,&mut sx);
+        setxy(s,Some(&sx),None,P);
+    }
+    if let Some(ry)=y {
+        modimp(ry,&mut sy);
+        setxy(s,None,Some(&sy),P);
+    }
+}
+
+// set generator
+pub fn ecngen(P: &mut ECP) {
+    if CONSTANT_X!=0 {
+        let mut sx:[SPINT;NLIMBS]=[0;NLIMBS];  
+        modint(CONSTANT_X,&mut sx);
+        setxy(0,Some(&sx),None,P);
+    } 
+    if CONSTANT_X==0 {
+        setxy(0,Some(&constant_x),Some(&constant_y),P);
+    }
+}
+
+// select point from precomputed array in constant time
+fn select(b:isize,W: &[ECP],P: &mut ECP) {
+    let mut MP=ECP::new();
+    let m=b>>(isize::BITS-1);
+    let babs=((b^m)-m) as usize;
+
+    ecncmv(teq(babs,0),&W[0],P);
+    ecncmv(teq(babs,1),&W[1],P);
+    ecncmv(teq(babs,2),&W[2],P);
+    ecncmv(teq(babs,3),&W[3],P);
+    ecncmv(teq(babs,4),&W[4],P);
+    ecncmv(teq(babs,5),&W[5],P);
+    ecncmv(teq(babs,6),&W[6],P);
+    ecncmv(teq(babs,7),&W[7],P);
+    ecncmv(teq(babs,8),&W[8],P);
     
-    for i in 0..10 {
-        sha3.process(dom4[i]);
-    }
-    for i in BYTES+1..2*BYTES+2 {
-        sha3.process(h[i]);
-    }
-
-    for i in 0..m.len() {
-        sha3.process(m[i]);
-    }
-    sha3.shake(&mut h,2*BYTES+2); 
-
-    reduce(&h,&mut r);
-    modexp(&r,&mut sh);  // convert to big endian array
-    ecnmul(&sh,&mut R);
-
-    let sign=ecnget(&mut R,None,Some(&mut sh));  // get y coordinate and sign
-    sh.reverse();              // big endian to little endian
-
-    for i in 0..BYTES {
-        sig[i]=sh[i];
-    }
-    sig[BYTES]=(sign<<7) as u8; // first part of signature
-
-    sha3=SHA3::new(SHAKE256);
-
-    for i in 0..10 {
-        sha3.process(dom4[i]);
-    }
-    for i in 0..BYTES+1 {
-        sha3.process(sig[i]);  // R
-    }
-    for i in 0..BYTES+1 {
-        sha3.process(ipub[i]);  // Q
-    }
-    for i in 0..m.len() {
-        sha3.process(m[i]);
-    }
-    sha3.shake(&mut h,2*BYTES+2);
-
-    reduce(&h,&mut d);
-    modmul(&s,&mut d);
-    modadd(&r,&mut d);
-
-    modexp(&d,&mut sh);
-    sh.reverse();
-    for i in 0..BYTES {
-        sig[BYTES+i+1]=sh[i];
-    }
-    sig[2*BYTES+1]=0;           // second part of signature
+    ecncpy(P,&mut MP);
+    ecnneg(&mut MP);
+    ecncmv((m&1) as usize,&MP,P);
 }
 
-pub fn VERIFY(public: &[u8],m:&[u8],sig:&[u8]) -> bool {
-    let mut buff:[u8;BYTES]=[0;BYTES]; 
-    let mut sh:[u8;BYTES]=[0;BYTES];
-    let mut G=ECP::new();
-    let mut R=ECP::new();
+// convert to double naf form
+fn dnaf(e: &[u8],f: &[u8],w: &mut [i8]) {
+    let mut ce:u8=0;
+    let mut cf:u8=0;
+    for i in 0..NBYTES {
+        let mut m=e[NBYTES-i-1];
+        let mut n=m;
+        let mut t=3*(n as usize)+(ce as usize);
+        ce=(t>>8) as u8;
+        n=(t&0xff) as u8;
+        let mut p=f[NBYTES-i-1];
+        let mut q=p;
+        t=3*(q as usize)+(cf as usize);
+        cf=(t>>8) as u8;
+        q=(t&0xff) as u8;
+        for j in 0..8 {
+            w[8*i+j]=((n&1)-(m&1)+3*((q&1)-(p&1))) as i8;
+            n>>=1; m>>=1; p>>=1; q>>=1;
+        }
+    }
+    for j in 0..8 {
+        w[8*NBYTES+j]=((ce&1)+3*(cf&1)) as i8;
+        ce>>=1; cf>>=1;
+    }
+}
+
+// point multiplication - constant time
+pub fn ecnmul(e: &[u8],P: &mut ECP) {
     let mut Q=ECP::new();
-   
-    let mut u:GEL=[0;LIMBS];
-    let mut h:[u8;2*BYTES+2]=[0;2*BYTES+2];
+    let mut W: [ECP; 9] = [
+        ECP::new(),
+        ECP::new(),
+        ECP::new(),
+        ECP::new(),
+        ECP::new(),
+        ECP::new(),
+        ECP::new(),
+        ECP::new(),
+        ECP::new(),
+    ];  
+    let mut w: [i8; 2*NBYTES+1] = [0; 2*NBYTES+1];
 
-    ecngen(&mut G);
+    ecninf(&mut W[0]);                      // O
+    ecncpy(P,&mut W[1]);                    // P
+    ecncpy(P,&mut W[2]); ecndbl(&mut W[2]);         // 2P
+    ecncpy(&W[2],&mut Q); ecncpy(&Q,&mut W[3]); ecnadd(P,&mut W[3]);  // 3P
+    ecncpy(&Q,&mut W[4]); ecndbl(&mut W[4]); // 4P
+    ecncpy(&W[4],&mut Q); ecncpy(&Q,&mut W[5]); ecnadd(P,&mut W[5]); // 5P
+    ecncpy(&Q,&mut W[8]); ecndbl(&mut W[8]); // 8P
+    ecncpy(&W[3],&mut Q); ecndbl(&mut Q); ecncpy(&Q,&mut W[6]); // 6P
+    ecncpy(&Q,&mut W[7]); ecnadd(P,&mut W[7]); // 7P
 
-// reconstruct point R
-    for i in 0..BYTES {
-        buff[i]=sig[i];
+    let mut j=0;
+    for i in 0..NBYTES {
+        let c=e[NBYTES-i-1] as i8;
+        w[j]=c&0x0f;
+        w[j+1]=(c>>4)&0xf;
+        j+=2;
     }
-    buff.reverse();
-    let mut sign=(sig[BYTES]>>7) as usize;
-    ecnset(sign,None,Some(&buff),&mut R);
-    if ecnisinf(&R) {
-        return false;
+    w[2*NBYTES]=0;
+    for j in 0..2*NBYTES {
+        let t=7-w[j];
+        let m=(t>>4)&1;
+        w[j]-=m<<4;
+        w[j+1]+=m;
     }
-
-// reconstruct point Q 
-    for i in 0..BYTES {
-        buff[i]=public[i];
+    select(w[2*NBYTES] as isize,&W,P);
+    for i in (0..2*NBYTES).rev() {
+        select(w[i] as isize,&W,&mut Q);
+        ecndbl(P);
+        ecndbl(P);
+        ecndbl(P);
+        ecndbl(P);
+        ecnadd(&Q,P);
     }
-    buff.reverse();
-    sign=((public[BYTES]>>7)&1) as usize;
-    ecnset(sign,None,Some(&buff),&mut Q);
-    if ecnisinf(&Q) {
-        return false;
-    }
-
-
-    for i in 0..BYTES {
-        buff[i]=sig[i+BYTES+1];
-    }
-    buff.reverse();
-
-    let mut sha3=SHA3::new(SHAKE256);
-
-    for i in 0..10 {
-        sha3.process(dom4[i]);
-    }
-    for i in 0..BYTES+1 {
-        sha3.process(sig[i]);  // R
-    }
-    for i in 0..BYTES+1 {
-        sha3.process(public[i]);  // Q
-    }
-    for i in 0..m.len() {
-        sha3.process(m[i]);
-    }
-    sha3.shake(&mut h,2*BYTES+2);
-
-    reduce(&h,&mut u); modneg(&mut u); modexp(&u,&mut sh);
-
-    if !modimp(&buff,&mut u) {
-        return false;  // out of range
-    }
-    ecncof(&mut G); ecncof(&mut R); ecncof(&mut Q);
-    Q=ecnmul2(&buff,&G,&sh,&Q);
-
-    if ecncmp(&R,&Q) {
-        return true;
-    }
-    return false;
 }
 
-/*
+// double point multiplication R=eP+fQ
+// not constant time
+pub fn ecnmul2(e: &[u8],P: &ECP,f: &[u8],Q: &ECP) -> ECP {
+    let mut R=ECP::new();
+    let mut W: [ECP; 5] = [
+        ECP::new(),
+        ECP::new(),
+        ECP::new(),
+        ECP::new(),
+        ECP::new(),
+    ]; 
+    let mut w: [i8; 8*NBYTES+8] = [0; 8*NBYTES+8]; 
+    ecninf(&mut W[0]);      // O
+    ecncpy(P,&mut W[1]);    // P
+    ecncpy(Q,&mut W[3]);    // Q
+    ecncpy(Q,&mut W[2]); ecnsub(P,&mut W[2]);    // Q-P
+    ecncpy(Q,&mut W[4]); ecnadd(P,&mut W[4]);    // Q+P
 
-} */
+    dnaf(&e,&f,&mut w);
+    let mut i=8*NBYTES+7;
+    while w[i]==0 {  // ignore leading zeros
+        i-=1;
+    }
+    ecninf(&mut R);
+    while i>=1 {
+        ecndbl(&mut R);
+        let j=w[i];
+        if j>0 {
+            ecnadd(&W[j as usize],&mut R);
+        }
+        if j<0 {
+            ecnsub(&W[(-j) as usize],&mut R);
+        }
+        i-=1;
+    }
+    return R;
+}
+

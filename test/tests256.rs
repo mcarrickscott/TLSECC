@@ -3,11 +3,11 @@ extern crate tlsecc;
 
 use std::str;
 
-use tlsecc::s256::BYTES;
-use tlsecc::s256::KEY_PAIR;
-use tlsecc::s256::PREHASH;
-use tlsecc::s256::SIGN;
-use tlsecc::s256::VERIFY;
+use tlsecc::nist256::BYTES;
+use tlsecc::nist256::KEY_PAIR;
+use tlsecc::nist256::PREHASH;
+use tlsecc::nist256::SIGN;
+use tlsecc::nist256::VERIFY;
 
 
 // Some utility functions for I/O and debugging

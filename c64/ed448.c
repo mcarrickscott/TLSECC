@@ -1,25 +1,21 @@
-// Edwards curve support 
-// Use python scripts to generate code for ED25519 or ED448, or your own curve
-// Ax*2+y^2=1+B*x^2*y^2
-// Assumes A constant is -1 or +1
-//
-// Mike Scott 16th July 2024
-// TII
-//
-// code for 32/64-bit processor for ED25519 curve can be generated  by 
-//
-// python curve.py 32/64 ED25519
-//
-// code for 32/64-bit processor for ED448 curve can be generated  by
-//
-// python curve.py 32/64 ED448
+// Ed448 Implementation
+// see https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf
+// and RFC8032
+// python curve.py 64 ED448
+// This completes edwards.c for this curve. Then
+// gcc -O2 Ed448.c edwards.c hash.c -o Ed448
 
-// make sure decoration and generic are both set to False in monty.py or pseudo.py
+#include <stdio.h>
+#include <stdint.h>
+#include "hash.h"  // Some useful hash functions
 
-/*** Insert automatically generated code for modulus field.c here ***/
+#include "Ed448curve.h"   // elliptic curve API
+
+/*** Insert code automatically generated from group.c here ***/
+/* Note that much of this code is not needed and can be deleted */
 
 
-// Command line : python monty.py 64 ED448
+// Command line : python monty.py 64 ed448
 
 #include <stdint.h>
 #include <stdio.h>
@@ -32,13 +28,12 @@
 #define Wordlength 64
 #define Nlimbs 8
 #define Radix 56
-#define Nbits 448
+#define Nbits 446
 #define Nbytes 56
 
 #define MONTGOMERY
 #define ED448
 
-#define MULBYINT
 // propagate carries
 static spint inline prop(spint *n) {
   int i;
@@ -57,27 +52,30 @@ static spint inline prop(spint *n) {
 
 // propagate carries and add p if negative, propagate carries again
 static int inline flatten(spint *n) {
-  spint q = ((spint)1 << 56u);
   spint carry = prop(n);
-  n[0] -= (spint)1u & carry;
+  n[0] += ((spint)0x78c292ab5844f3u) & carry;
+  n[1] += ((spint)0xc2728dc58f5523u) & carry;
+  n[2] += ((spint)0x49aed63690216cu) & carry;
+  n[3] += ((spint)0x7cca23e9c44edbu) & carry;
   n[4] -= (spint)1u & carry;
-  n[7] += ((spint)1u * q) & carry;
+  n[7] += ((spint)0x40000000000000u) & carry;
   (void)prop(n);
   return (int)(carry & 1);
 }
 
 // Montgomery final subtract
 static int inline modfsb(spint *n) {
-  spint q = ((spint)1 << 56u);
-  n[0] += (spint)1u;
+  n[0] -= (spint)0x78c292ab5844f3u;
+  n[1] -= (spint)0xc2728dc58f5523u;
+  n[2] -= (spint)0x49aed63690216cu;
+  n[3] -= (spint)0x7cca23e9c44edbu;
   n[4] += (spint)1u;
-  n[7] -= (spint)1u * q;
+  n[7] -= (spint)0x40000000000000u;
   return flatten(n);
 }
 
 // Modular addition - reduce less than 2p
 static void inline modadd(const spint *a, const spint *b, spint *n) {
-  spint q = ((spint)1 << 56u);
   spint carry;
   n[0] = a[0] + b[0];
   n[1] = a[1] + b[1];
@@ -87,19 +85,24 @@ static void inline modadd(const spint *a, const spint *b, spint *n) {
   n[5] = a[5] + b[5];
   n[6] = a[6] + b[6];
   n[7] = a[7] + b[7];
-  n[0] += (spint)2u;
+  n[0] -= (spint)0xf1852556b089e6u;
+  n[1] -= (spint)0x184e51b8b1eaa46u;
+  n[2] -= (spint)0x935dac6d2042d8u;
+  n[3] -= (spint)0xf99447d3889db6u;
   n[4] += (spint)2u;
-  n[7] -= (spint)2u * q;
+  n[7] -= (spint)0x80000000000000u;
   carry = prop(n);
-  n[0] -= (spint)2u & carry;
+  n[0] += ((spint)0xf1852556b089e6u) & carry;
+  n[1] += ((spint)0x184e51b8b1eaa46u) & carry;
+  n[2] += ((spint)0x935dac6d2042d8u) & carry;
+  n[3] += ((spint)0xf99447d3889db6u) & carry;
   n[4] -= (spint)2u & carry;
-  n[7] += ((spint)2u * q) & carry;
+  n[7] += ((spint)0x80000000000000u) & carry;
   (void)prop(n);
 }
 
 // Modular subtraction - reduce less than 2p
 static void inline modsub(const spint *a, const spint *b, spint *n) {
-  spint q = ((spint)1 << 56u);
   spint carry;
   n[0] = a[0] - b[0];
   n[1] = a[1] - b[1];
@@ -110,15 +113,17 @@ static void inline modsub(const spint *a, const spint *b, spint *n) {
   n[6] = a[6] - b[6];
   n[7] = a[7] - b[7];
   carry = prop(n);
-  n[0] -= (spint)2u & carry;
+  n[0] += ((spint)0xf1852556b089e6u) & carry;
+  n[1] += ((spint)0x184e51b8b1eaa46u) & carry;
+  n[2] += ((spint)0x935dac6d2042d8u) & carry;
+  n[3] += ((spint)0xf99447d3889db6u) & carry;
   n[4] -= (spint)2u & carry;
-  n[7] += ((spint)2u * q) & carry;
+  n[7] += ((spint)0x80000000000000u) & carry;
   (void)prop(n);
 }
 
 // Modular negation
 static void inline modneg(const spint *b, spint *n) {
-  spint q = ((spint)1 << 56u);
   spint carry;
   n[0] = (spint)0 - b[0];
   n[1] = (spint)0 - b[1];
@@ -129,72 +134,54 @@ static void inline modneg(const spint *b, spint *n) {
   n[6] = (spint)0 - b[6];
   n[7] = (spint)0 - b[7];
   carry = prop(n);
-  n[0] -= (spint)2u & carry;
+  n[0] += ((spint)0xf1852556b089e6u) & carry;
+  n[1] += ((spint)0x184e51b8b1eaa46u) & carry;
+  n[2] += ((spint)0x935dac6d2042d8u) & carry;
+  n[3] += ((spint)0xf99447d3889db6u) & carry;
   n[4] -= (spint)2u & carry;
-  n[7] += ((spint)2u * q) & carry;
+  n[7] += ((spint)0x80000000000000u) & carry;
   (void)prop(n);
 }
 
-// Modular multiplication by an integer, c=a*b mod 2p
-static void inline modmli(const spint *a, int b, spint *c) {
-  udpint t = 0;
-  spint s;
-  spint mask = ((spint)1 << 56u) - (spint)1;
-  t += (udpint)a[0] * (udpint)b;
-  c[0] = (spint)t & mask;
-  t = t >> 56u;
-  t += (udpint)a[1] * (udpint)b;
-  c[1] = (spint)t & mask;
-  t = t >> 56u;
-  t += (udpint)a[2] * (udpint)b;
-  c[2] = (spint)t & mask;
-  t = t >> 56u;
-  t += (udpint)a[3] * (udpint)b;
-  c[3] = (spint)t & mask;
-  t = t >> 56u;
-  t += (udpint)a[4] * (udpint)b;
-  c[4] = (spint)t & mask;
-  t = t >> 56u;
-  t += (udpint)a[5] * (udpint)b;
-  c[5] = (spint)t & mask;
-  t = t >> 56u;
-  t += (udpint)a[6] * (udpint)b;
-  c[6] = (spint)t & mask;
-  t = t >> 56u;
-  t += (udpint)a[7] * (udpint)b;
-  c[7] = (spint)t & mask;
-  t = t >> 56u;
-  // reduction pass
-
-  s = (spint)t;
-  c[0] += s;
-  c[4] += s;
-}
-
 // Overflow limit   = 340282366920938463463374607431768211456
-// maximum possible = 41538374868283342313862929710055431
+// maximum possible = 53255119132055870337481458170721706
 // Modular multiplication, c=a*b mod 2p
 static void inline modmul(const spint *a, const spint *b, spint *c) {
   dpint t = 0;
+  spint p0 = 0x78c292ab5844f3u;
+  spint p1 = 0xc2728dc58f5523u;
+  spint p2 = 0x49aed63690216cu;
+  spint p3 = 0x7cca23e9c44edbu;
   spint q = ((spint)1 << 56u); // q is unsaturated radix
   spint mask = (spint)(q - (spint)1);
+  spint ndash = 0xbd440fae918bc5u;
   t += (dpint)a[0] * b[0];
-  spint v0 = ((spint)t & mask);
+  spint v0 = (((spint)t * ndash) & mask);
+  t += (dpint)v0 * (dpint)p0;
   t >>= 56;
   t += (dpint)a[0] * b[1];
   t += (dpint)a[1] * b[0];
-  spint v1 = ((spint)t & mask);
+  t += (dpint)v0 * (dpint)p1;
+  spint v1 = (((spint)t * ndash) & mask);
+  t += (dpint)v1 * (dpint)p0;
   t >>= 56;
   t += (dpint)a[0] * b[2];
   t += (dpint)a[1] * b[1];
   t += (dpint)a[2] * b[0];
-  spint v2 = ((spint)t & mask);
+  t += (dpint)v0 * (dpint)p2;
+  t += (dpint)v1 * (dpint)p1;
+  spint v2 = (((spint)t * ndash) & mask);
+  t += (dpint)v2 * (dpint)p0;
   t >>= 56;
   t += (dpint)a[0] * b[3];
   t += (dpint)a[1] * b[2];
   t += (dpint)a[2] * b[1];
   t += (dpint)a[3] * b[0];
-  spint v3 = ((spint)t & mask);
+  t += (dpint)v0 * (dpint)p3;
+  t += (dpint)v1 * (dpint)p2;
+  t += (dpint)v2 * (dpint)p1;
+  spint v3 = (((spint)t * ndash) & mask);
+  t += (dpint)v3 * (dpint)p0;
   t >>= 56;
   t += (dpint)a[0] * b[4];
   t += (dpint)a[1] * b[3];
@@ -202,7 +189,11 @@ static void inline modmul(const spint *a, const spint *b, spint *c) {
   t += (dpint)a[3] * b[1];
   t += (dpint)a[4] * b[0];
   t += (dpint)(spint)(q - v0);
-  spint v4 = ((spint)t & mask);
+  t += (dpint)v1 * (dpint)p3;
+  t += (dpint)v2 * (dpint)p2;
+  t += (dpint)v3 * (dpint)p1;
+  spint v4 = (((spint)t * ndash) & mask);
+  t += (dpint)v4 * (dpint)p0;
   t >>= 56;
   t += (dpint)a[0] * b[5];
   t += (dpint)a[1] * b[4];
@@ -212,8 +203,12 @@ static void inline modmul(const spint *a, const spint *b, spint *c) {
   t += (dpint)a[5] * b[0];
   spint s = (spint)mask;
   s -= v1;
+  t += (dpint)v2 * (dpint)p3;
+  t += (dpint)v3 * (dpint)p2;
+  t += (dpint)v4 * (dpint)p1;
   t += (dpint)s;
-  spint v5 = ((spint)t & mask);
+  spint v5 = (((spint)t * ndash) & mask);
+  t += (dpint)v5 * (dpint)p0;
   t >>= 56;
   t += (dpint)a[0] * b[6];
   t += (dpint)a[1] * b[5];
@@ -224,8 +219,12 @@ static void inline modmul(const spint *a, const spint *b, spint *c) {
   t += (dpint)a[6] * b[0];
   s = (spint)mask;
   s -= v2;
+  t += (dpint)v3 * (dpint)p3;
+  t += (dpint)v4 * (dpint)p2;
+  t += (dpint)v5 * (dpint)p1;
   t += (dpint)s;
-  spint v6 = ((spint)t & mask);
+  spint v6 = (((spint)t * ndash) & mask);
+  t += (dpint)v6 * (dpint)p0;
   t >>= 56;
   t += (dpint)a[0] * b[7];
   t += (dpint)a[1] * b[6];
@@ -236,9 +235,14 @@ static void inline modmul(const spint *a, const spint *b, spint *c) {
   t += (dpint)a[6] * b[1];
   t += (dpint)a[7] * b[0];
   s = (spint)mask;
+  t += (dpint)(udpint)((udpint)v0 << 54u);
   s -= v3;
+  t += (dpint)v4 * (dpint)p3;
+  t += (dpint)v5 * (dpint)p2;
+  t += (dpint)v6 * (dpint)p1;
   t += (dpint)s;
-  spint v7 = ((spint)t & mask);
+  spint v7 = (((spint)t * ndash) & mask);
+  t += (dpint)v7 * (dpint)p0;
   t >>= 56;
   t += (dpint)a[1] * b[7];
   t += (dpint)a[2] * b[6];
@@ -248,10 +252,13 @@ static void inline modmul(const spint *a, const spint *b, spint *c) {
   t += (dpint)a[6] * b[2];
   t += (dpint)a[7] * b[1];
   s = (spint)mask;
-  s += v0;
+  t += (dpint)(udpint)((udpint)v1 << 54u);
   s -= v4;
+  t += (dpint)v5 * (dpint)p3;
+  t += (dpint)v6 * (dpint)p2;
+  t += (dpint)v7 * (dpint)p1;
   t += (dpint)s;
-  spint v8 = ((spint)t & mask);
+  c[0] = ((spint)t & mask);
   t >>= 56;
   t += (dpint)a[2] * b[7];
   t += (dpint)a[3] * b[6];
@@ -260,10 +267,12 @@ static void inline modmul(const spint *a, const spint *b, spint *c) {
   t += (dpint)a[6] * b[3];
   t += (dpint)a[7] * b[2];
   s = (spint)mask;
-  s += v1;
+  t += (dpint)(udpint)((udpint)v2 << 54u);
   s -= v5;
+  t += (dpint)v6 * (dpint)p3;
+  t += (dpint)v7 * (dpint)p2;
   t += (dpint)s;
-  c[0] = ((spint)t & mask);
+  c[1] = ((spint)t & mask);
   t >>= 56;
   t += (dpint)a[3] * b[7];
   t += (dpint)a[4] * b[6];
@@ -271,49 +280,44 @@ static void inline modmul(const spint *a, const spint *b, spint *c) {
   t += (dpint)a[6] * b[4];
   t += (dpint)a[7] * b[3];
   s = (spint)mask;
-  s += v2;
+  t += (dpint)(udpint)((udpint)v3 << 54u);
   s -= v6;
+  t += (dpint)v7 * (dpint)p3;
   t += (dpint)s;
-  c[1] = ((spint)t & mask);
+  c[2] = ((spint)t & mask);
   t >>= 56;
   t += (dpint)a[4] * b[7];
   t += (dpint)a[5] * b[6];
   t += (dpint)a[6] * b[5];
   t += (dpint)a[7] * b[4];
   s = (spint)mask;
-  s += v3;
+  t += (dpint)(udpint)((udpint)v4 << 54u);
   s -= v7;
   t += (dpint)s;
-  c[2] = ((spint)t & mask);
+  c[3] = ((spint)t & mask);
   t >>= 56;
   t += (dpint)a[5] * b[7];
   t += (dpint)a[6] * b[6];
   t += (dpint)a[7] * b[5];
   s = (spint)mask;
-  s += v4;
-  s -= v8;
+  t += (dpint)(udpint)((udpint)v5 << 54u);
   t += (dpint)s;
-  c[3] = ((spint)t & mask);
+  c[4] = ((spint)t & mask);
   t >>= 56;
   t += (dpint)a[6] * b[7];
   t += (dpint)a[7] * b[6];
   s = (spint)mask;
-  s += v5;
-  t += (dpint)s;
-  c[4] = ((spint)t & mask);
-  t >>= 56;
-  t += (dpint)a[7] * b[7];
-  s = (spint)mask;
-  s += v6;
+  t += (dpint)(udpint)((udpint)v6 << 54u);
   t += (dpint)s;
   c[5] = ((spint)t & mask);
   t >>= 56;
+  t += (dpint)a[7] * b[7];
   s = (spint)mask;
-  s += v7;
+  t += (dpint)(udpint)((udpint)v7 << 54u);
   t += (dpint)s;
   c[6] = ((spint)t & mask);
   t >>= 56;
-  t += (dpint)(spint)(v8 - (spint)1);
+  t -= (dpint)1u;
   c[7] = (spint)t;
 }
 
@@ -321,28 +325,43 @@ static void inline modmul(const spint *a, const spint *b, spint *c) {
 static void inline modsqr(const spint *a, spint *c) {
   udpint tot;
   udpint t = 0;
+  spint p0 = 0x78c292ab5844f3u;
+  spint p1 = 0xc2728dc58f5523u;
+  spint p2 = 0x49aed63690216cu;
+  spint p3 = 0x7cca23e9c44edbu;
   spint q = ((spint)1 << 56u); // q is unsaturated radix
   spint mask = (spint)(q - (spint)1);
+  spint ndash = 0xbd440fae918bc5u;
   tot = (udpint)a[0] * a[0];
   t = tot;
-  spint v0 = ((spint)t & mask);
+  spint v0 = (((spint)t * ndash) & mask);
+  t += (udpint)v0 * p0;
   t >>= 56;
   tot = (udpint)a[0] * a[1];
   tot *= 2;
   t += tot;
-  spint v1 = ((spint)t & mask);
+  t += (udpint)v0 * p1;
+  spint v1 = (((spint)t * ndash) & mask);
+  t += (udpint)v1 * p0;
   t >>= 56;
   tot = (udpint)a[0] * a[2];
   tot *= 2;
   tot += (udpint)a[1] * a[1];
   t += tot;
-  spint v2 = ((spint)t & mask);
+  t += (udpint)v0 * p2;
+  t += (udpint)v1 * p1;
+  spint v2 = (((spint)t * ndash) & mask);
+  t += (udpint)v2 * p0;
   t >>= 56;
   tot = (udpint)a[0] * a[3];
   tot += (udpint)a[1] * a[2];
   tot *= 2;
   t += tot;
-  spint v3 = ((spint)t & mask);
+  t += (udpint)v0 * p3;
+  t += (udpint)v1 * p2;
+  t += (udpint)v2 * p1;
+  spint v3 = (((spint)t * ndash) & mask);
+  t += (udpint)v3 * p0;
   t >>= 56;
   tot = (udpint)a[0] * a[4];
   tot += (udpint)a[1] * a[3];
@@ -350,7 +369,11 @@ static void inline modsqr(const spint *a, spint *c) {
   tot += (udpint)a[2] * a[2];
   t += tot;
   t += (udpint)(spint)(q - v0);
-  spint v4 = ((spint)t & mask);
+  t += (udpint)v1 * p3;
+  t += (udpint)v2 * p2;
+  t += (udpint)v3 * p1;
+  spint v4 = (((spint)t * ndash) & mask);
+  t += (udpint)v4 * p0;
   t >>= 56;
   tot = (udpint)a[0] * a[5];
   tot += (udpint)a[1] * a[4];
@@ -359,8 +382,12 @@ static void inline modsqr(const spint *a, spint *c) {
   t += tot;
   spint s = (spint)mask;
   s -= v1;
+  t += (udpint)v2 * p3;
+  t += (udpint)v3 * p2;
+  t += (udpint)v4 * p1;
   t += (udpint)s;
-  spint v5 = ((spint)t & mask);
+  spint v5 = (((spint)t * ndash) & mask);
+  t += (udpint)v5 * p0;
   t >>= 56;
   tot = (udpint)a[0] * a[6];
   tot += (udpint)a[1] * a[5];
@@ -370,8 +397,12 @@ static void inline modsqr(const spint *a, spint *c) {
   t += tot;
   s = (spint)mask;
   s -= v2;
+  t += (udpint)v3 * p3;
+  t += (udpint)v4 * p2;
+  t += (udpint)v5 * p1;
   t += (udpint)s;
-  spint v6 = ((spint)t & mask);
+  spint v6 = (((spint)t * ndash) & mask);
+  t += (udpint)v6 * p0;
   t >>= 56;
   tot = (udpint)a[0] * a[7];
   tot += (udpint)a[1] * a[6];
@@ -380,9 +411,14 @@ static void inline modsqr(const spint *a, spint *c) {
   tot *= 2;
   t += tot;
   s = (spint)mask;
+  t += (udpint)v0 << 54u;
   s -= v3;
+  t += (udpint)v4 * p3;
+  t += (udpint)v5 * p2;
+  t += (udpint)v6 * p1;
   t += (udpint)s;
-  spint v7 = ((spint)t & mask);
+  spint v7 = (((spint)t * ndash) & mask);
+  t += (udpint)v7 * p0;
   t >>= 56;
   tot = (udpint)a[1] * a[7];
   tot += (udpint)a[2] * a[6];
@@ -391,10 +427,13 @@ static void inline modsqr(const spint *a, spint *c) {
   tot += (udpint)a[4] * a[4];
   t += tot;
   s = (spint)mask;
-  s += v0;
+  t += (udpint)v1 << 54u;
   s -= v4;
+  t += (udpint)v5 * p3;
+  t += (udpint)v6 * p2;
+  t += (udpint)v7 * p1;
   t += (udpint)s;
-  spint v8 = ((spint)t & mask);
+  c[0] = ((spint)t & mask);
   t >>= 56;
   tot = (udpint)a[2] * a[7];
   tot += (udpint)a[3] * a[6];
@@ -402,10 +441,12 @@ static void inline modsqr(const spint *a, spint *c) {
   tot *= 2;
   t += tot;
   s = (spint)mask;
-  s += v1;
+  t += (udpint)v2 << 54u;
   s -= v5;
+  t += (udpint)v6 * p3;
+  t += (udpint)v7 * p2;
   t += (udpint)s;
-  c[0] = ((spint)t & mask);
+  c[1] = ((spint)t & mask);
   t >>= 56;
   tot = (udpint)a[3] * a[7];
   tot += (udpint)a[4] * a[6];
@@ -413,52 +454,47 @@ static void inline modsqr(const spint *a, spint *c) {
   tot += (udpint)a[5] * a[5];
   t += tot;
   s = (spint)mask;
-  s += v2;
+  t += (udpint)v3 << 54u;
   s -= v6;
+  t += (udpint)v7 * p3;
   t += (udpint)s;
-  c[1] = ((spint)t & mask);
+  c[2] = ((spint)t & mask);
   t >>= 56;
   tot = (udpint)a[4] * a[7];
   tot += (udpint)a[5] * a[6];
   tot *= 2;
   t += tot;
   s = (spint)mask;
-  s += v3;
+  t += (udpint)v4 << 54u;
   s -= v7;
   t += (udpint)s;
-  c[2] = ((spint)t & mask);
+  c[3] = ((spint)t & mask);
   t >>= 56;
   tot = (udpint)a[5] * a[7];
   tot *= 2;
   tot += (udpint)a[6] * a[6];
   t += tot;
   s = (spint)mask;
-  s += v4;
-  s -= v8;
+  t += (udpint)v5 << 54u;
   t += (udpint)s;
-  c[3] = ((spint)t & mask);
+  c[4] = ((spint)t & mask);
   t >>= 56;
   tot = (udpint)a[6] * a[7];
   tot *= 2;
   t += tot;
   s = (spint)mask;
-  s += v5;
+  t += (udpint)v6 << 54u;
   t += (udpint)s;
-  c[4] = ((spint)t & mask);
+  c[5] = ((spint)t & mask);
   t >>= 56;
   tot = (udpint)a[7] * a[7];
   t += tot;
   s = (spint)mask;
-  s += v6;
-  t += (udpint)s;
-  c[5] = ((spint)t & mask);
-  t >>= 56;
-  s = (spint)mask;
-  s += v7;
+  t += (udpint)v7 << 54u;
   t += (udpint)s;
   c[6] = ((spint)t & mask);
   t >>= 56;
-  t += (udpint)(spint)(v8 - (spint)1);
+  t -= 1u;
   c[7] = (spint)t;
 }
 
@@ -483,37 +519,136 @@ static void modpro(const spint *w, spint *z) {
   spint x[8];
   spint t0[8];
   spint t1[8];
+  spint t2[8];
+  spint t3[8];
+  spint t4[8];
+  spint t5[8];
+  spint t6[8];
+  spint t7[8];
+  spint t8[8];
+  spint t9[8];
+  spint t10[8];
+  spint t11[8];
+  spint t12[8];
+  spint t13[8];
+  spint t14[8];
+  spint t15[8];
   modcpy(w, x);
-  modsqr(x, z);
-  modmul(x, z, z);
-  modsqr(z, z);
-  modmul(x, z, z);
-  modcpy(z, t0);
-  modnsqr(t0, 3);
-  modmul(z, t0, z);
-  modcpy(z, t0);
+  modsqr(x, t12);
+  modmul(x, t12, t1);
+  modmul(x, t1, z);
+  modmul(x, z, t5);
+  modmul(z, t5, t4);
+  modmul(t12, t4, t7);
+  modmul(t12, t7, t2);
+  modmul(t12, t2, z);
+  modmul(t12, z, t0);
+  modmul(t12, t0, t9);
+  modmul(t12, t9, t3);
+  modmul(t12, t3, t8);
+  modmul(t12, t8, t10);
+  modmul(t12, t10, t6);
+  modmul(t12, t6, t11);
+  modmul(t12, t11, t12);
+  modsqr(t12, t14);
+  modsqr(t14, t13);
+  modcpy(t13, t15);
+  modnsqr(t15, 5);
+  modmul(t13, t15, t13);
+  modcpy(t13, t15);
+  modnsqr(t15, 4);
+  modmul(t14, t15, t15);
+  modnsqr(t15, 11);
+  modmul(t13, t15, t13);
+  modcpy(t13, t15);
+  modnsqr(t15, 4);
+  modmul(t14, t15, t14);
+  modnsqr(t14, 26);
+  modmul(t13, t14, t13);
+  modcpy(t13, t14);
+  modnsqr(t14, 55);
+  modmul(t13, t14, t13);
+  modcpy(t13, t14);
+  modnsqr(t14, 110);
+  modmul(t13, t14, t13);
+  modmul(t1, t13, t13);
+  modnsqr(t13, 6);
+  modmul(t12, t13, t13);
+  modnsqr(t13, 7);
+  modmul(t10, t13, t13);
+  modnsqr(t13, 6);
+  modmul(t0, t13, t13);
+  modnsqr(t13, 8);
+  modmul(t12, t13, t12);
+  modnsqr(t12, 6);
+  modmul(t9, t12, t12);
+  modnsqr(t12, 5);
+  modmul(t0, t12, t12);
+  modnsqr(t12, 8);
+  modmul(t9, t12, t12);
+  modnsqr(t12, 4);
+  modmul(t7, t12, t12);
+  modnsqr(t12, 6);
+  modmul(t6, t12, t12);
+  modnsqr(t12, 5);
+  modmul(t4, t12, t12);
+  modnsqr(t12, 6);
+  modmul(t2, t12, t12);
+  modnsqr(t12, 6);
+  modmul(t11, t12, t11);
+  modnsqr(t11, 5);
+  modmul(t3, t11, t11);
+  modnsqr(t11, 5);
+  modmul(t0, t11, t11);
+  modnsqr(t11, 4);
+  modmul(t7, t11, t11);
+  modnsqr(t11, 5);
+  modmul(t4, t11, t11);
+  modnsqr(t11, 7);
+  modmul(x, t11, t11);
+  modnsqr(t11, 8);
+  modmul(t7, t11, t11);
+  modnsqr(t11, 6);
+  modmul(t10, t11, t10);
+  modsqr(t10, t10);
+  modmul(x, t10, t10);
+  modnsqr(t10, 9);
+  modmul(t9, t10, t9);
+  modnsqr(t9, 4);
+  modmul(t4, t9, t9);
+  modnsqr(t9, 6);
+  modmul(t0, t9, t9);
+  modnsqr(t9, 5);
+  modmul(t8, t9, t8);
+  modnsqr(t8, 7);
+  modmul(t7, t8, t7);
+  modnsqr(t7, 7);
+  modmul(z, t7, t7);
+  modnsqr(t7, 6);
+  modmul(t3, t7, t7);
+  modnsqr(t7, 5);
+  modmul(t4, t7, t7);
+  modnsqr(t7, 8);
+  modmul(t6, t7, t6);
+  modnsqr(t6, 2);
+  modmul(t1, t6, t6);
+  modnsqr(t6, 5);
+  modmul(t1, t6, t6);
+  modnsqr(t6, 7);
+  modmul(t5, t6, t5);
+  modnsqr(t5, 6);
+  modmul(t4, t5, t4);
+  modnsqr(t4, 6);
+  modmul(t3, t4, t3);
+  modnsqr(t3, 5);
+  modmul(t2, t3, t2);
+  modnsqr(t2, 3);
+  modmul(t1, t2, t1);
+  modnsqr(t1, 9);
+  modmul(t0, t1, t0);
   modnsqr(t0, 6);
-  modmul(z, t0, t0);
-  modcpy(t0, t1);
-  modnsqr(t1, 12);
-  modmul(t0, t1, t0);
-  modcpy(t0, t1);
-  modnsqr(t1, 6);
-  modmul(z, t1, z);
-  modnsqr(t1, 18);
-  modmul(t0, t1, t0);
-  modcpy(t0, t1);
-  modnsqr(t1, 48);
-  modmul(t0, t1, t0);
-  modcpy(t0, t1);
-  modnsqr(t1, 96);
-  modmul(t0, t1, t0);
-  modnsqr(t0, 30);
   modmul(z, t0, z);
-  modsqr(z, t0);
-  modmul(x, t0, t0);
-  modnsqr(t0, 223);
-  modmul(z, t0, z);
+  modnsqr(z, 2);
 }
 
 // calculate inverse, provide progenitor h if available
@@ -532,7 +667,9 @@ static void modinv(const spint *x, const spint *h, spint *z) {
 
 // Convert m to n-residue form, n=nres(m)
 static void nres(const spint *m, spint *n) {
-  const spint c[8] = {0x0u, 0x0u, 0x2u, 0x0u, 0x0u, 0x0u, 0x3u, 0x0u};
+  const spint c[8] = {0x539257049b9b60u, 0x2c4bc1b195d9e3u, 0x2388ea18597af3u,
+                      0x5ee4d8380d66deu, 0xc47c44ae17cf72u, 0x70af1a9cc14ba3u,
+                      0x292052bcb7e4d0u, 0x3402a939f823b7u};
   modmul(m, c, n);
 }
 
@@ -551,16 +688,14 @@ static void redc(const spint *n, spint *m) {
 // reduce double length input to n-residue
 static void modred(const spint *n, spint *b) {
   int i;
-  const spint h[8] = {0x0u, 0x2u, 0x0u, 0x0u, 0x0u, 0x3u, 0x0u, 0x0u};
   spint t[8];
   for (i = 0; i < 8; i++) {
     b[i] = n[i];
     t[i] = n[i + 8];
   }
   nres(t, t);
-  modmul(t, h, t);
-  nres(b, b);
   modadd(b, t, b);
+  nres(b, b);
 }
 
 // is unity?
@@ -662,7 +797,7 @@ static void modcsw(int d, volatile spint *g, volatile spint *f) {
       f[i] = aux = c0*t+c1*s;
       f[i] = aux-w;  
       g[i] = aux = c0*s+c1*t;
-      g[i] = aux-w;  
+      g[i] = aux-w;   
   }
 }
 
@@ -758,488 +893,241 @@ static int modcmp(const spint *a, const spint *b) {
   return eq;
 }
 
-
 /*** End of automatically generated code ***/
 
-#include "Ed448curve.h"
-
+// number of bytes in representation
 #define BYTES Nbytes
-#define LIMBS Nlimbs
-#define TOPBIT (8*sizeof(int)-1)
+typedef spint gel[Nlimbs];  // group element definition
 
-/*** Insert automatically generated curve definition curve.c here ***/
+// Some utility functions for I/O and debugging
 
-
-#define COF 2
-#define CONSTANT_A 1
-#define CONSTANT_B -39081
-static const spint constant_x[8]={0x420685f0ea8836,0x35bf93b17aa383,0xb7bc2914f8fe6d,0xe44cd37ab765fa,0x34f39b1b69235e,0x44d6fb9be886a8,0xee96c7295e6eb4,0xd16ef0905d88b9};
-static const spint constant_y[8]={0xd81f4fba184177,0xac119c79a99632,0xda8e9ac23c2104,0x416ef259fc5486,0x46ff5902c1cc32,0x4fa9dd01223251,0xa1f0e6acaf9471,0x65f7687a33ab50};
-
-
-
-/*** End of automatically generated code ***/
-
-
-// return 1 if b==c, no branching 
-static int teq(int b, int c)
-{
-    int x = b ^ c;
-    x -= 1; // if x=0, x now -1
-    return ((x >> TOPBIT) & 1);
+// reverse bytes of buff - for little endian
+static void reverse(char *buff) {
+    int n=BYTES;
+    for (int i = 0; i < n/2; i++) { 
+        char ch = buff[i]; 
+        buff[i] = buff[n - i - 1]; 
+        buff[n - i - 1] = ch; 
+    } 
 }
 
-// copy point
-void ecn448cpy(point *Q,point *P)
-{
-    modcpy(Q->x,P->x);
-    modcpy(Q->y,P->y);
-    modcpy(Q->z,P->z);
-}
 
-// negate P
-void ecn448neg(point *P)
-{
-    modneg(P->x,P->x);
-}
+// I/O debug code
+// output a modulo number in hex
 
-// add Q to P
-// standard projective method from EFD - https://www.hyperelliptic.org/EFD/
-void ecn448add(point *Q,point *P)
-{
-    spint A[Nlimbs],B[Nlimbs],C[Nlimbs],D[Nlimbs],E[Nlimbs],F[Nlimbs],G[Nlimbs];
-    modmul(Q->z,P->z,A);
-    modsqr(A,B);
-    modmul(Q->x,P->x,C);
-    modmul(Q->y,P->y,D);
-    modmul(C,D,E);
-#ifdef CONSTANT_B
-#if CONSTANT_B>0
-    modmli(E,CONSTANT_B,E);
-    modsub(B,E,F);
-    modadd(B,E,G);
-#else
-    modmli(E,-CONSTANT_B,E);
-    modadd(B,E,F);
-    modsub(B,E,G);
-#endif
-#else
-    modmul(E,constant_b,E);
-    modsub(B,E,F);
-    modadd(B,E,G);
-#endif
-    modadd(P->x,P->y,B);
-    modadd(Q->x,Q->y,E);
-    modmul(B,E,P->x);
-    modsub(P->x,C,P->x);
-    modsub(P->x,D,P->x);
-    modmul(P->x,F,P->x);
-    modmul(P->x,A,P->x);
-#if CONSTANT_A==-1
-    modadd(D,C,P->y);
-#else
-    modsub(D,C,P->y);
-#endif
-    modmul(P->y,A,P->y);
-    modmul(P->y,G,P->y);
-    modmul(F,G,P->z);
-}
-
-// subtract Q from P
-void ecn448sub(point *Q,point *P)
-{
-    point W;
-    ecn448cpy(Q,&W); ecn448neg(&W);
-    ecn448add(&W,P);
-}
-
-// double P
-// standard projective method from EFD - https://www.hyperelliptic.org/EFD/
-void ecn448dbl(point *P)
-{
-    spint B[Nlimbs],C[Nlimbs],D[Nlimbs],E[Nlimbs],F[Nlimbs],H[Nlimbs],J[Nlimbs];
-    modadd(P->x,P->y,B);
-    modsqr(B,B);
-    modsqr(P->x,C);
-    modsqr(P->y,D);
-    modsqr(P->z,H);
-    modadd(H,H,H);
-#if CONSTANT_A==-1
-    modneg(C,E);
-#else
-    modcpy(C,E);
-#endif
-    modadd(E,D,F);
-    modsub(F,H,J);
-    modsub(B,C,P->x);
-    modsub(P->x,D,P->x);
-    modmul(P->x,J,P->x);
-    modsub(E,D,P->y);
-    modmul(P->y,F,P->y);
-    modmul(F,J,P->z);
-}
 /*
-      B = (X1+Y1)^2
-      C = X1^2
-      D = Y1^2
-      H = 2Z1^2
+static void output(spint *x) {
+    char b[Nbytes+1];
+    char buff[(2*Nbytes)+1];
+    modexp(x,b);
+    toHex(56,b,buff);
+    puts(buff);
+}
 
-      E = C                 
-      F = E+D               F=C+D
-      J = F-H               J=F-H
-      X3 = (B-C-D)*J        X3=(B-F)*J
-      Y3 = F*(E-D)          Y3=(C-D)*F
-      Z3 = F*J              Z3=F*J
-
-      E = -C
-      F = E+D               F=-C+D          F=D-C           F=D-C
-      J = F-H               J=F-H           J=-F-H          J=F+H
-      X3 = (B-C-D)*J        X3=(B-C-D)*J    X3=(B-C-D)*J    X3=(C+D-B)*J
-      Y3 = F*(E-D)          Y3=F*(-C-D)     Y3=F*(C+D)      Y3=F*(C+D)
-      Z3 = F*J              Z3=F*J          Z3=-F*J         Z3=F*J
-
-
+// output a point (x,y)
+void outputxy(point *P)
+{
+    if (ecn448isinf(P)) {
+        printf("P= O\n");
+    } else {
+        char x[BYTES],y[BYTES];
+        char buff[(2*BYTES)+1];
+        ecn448get(P,x,y);
+        toHex(BYTES,x,buff);
+        printf("Px= "); puts(buff);
+        toHex(BYTES,y,buff);
+        printf("Py= "); puts(buff);
+    }
+}
 */
 
-// set to infinity
-void ecn448inf(point *P)
+// reduce 114 byte array h to integer r modulo group order q, in constant time
+// Consider h as 2^440.(2^440x + y)  + z, where x,y and z < q (z is bottom 55 bytes, y is next 55 bytes, x is top 4 bytes)
+// Important that x,y and z < q, 55 bytes = 440 bits, q is 446 bits
+static void reduce(char *h,spint *r)
 {
-    modzer(P->x);
-    modone(P->y);
-    modone(P->z);
+    int i;
+    char buff[BYTES];
+    gel x,y,z,c;
+
+    mod2r(440,c);
+   
+    for (i=0;i<55;i++)  // bottom 55 bytes
+        buff[i]=h[i];
+    buff[55]=0;
+    reverse(buff);
+    modimp(buff,z);  
+    
+    for (i=0;i<55;i++)  // middle 55 bytes
+        buff[i]=h[i+55];
+    buff[55]=0;
+    reverse(buff);
+    modimp(buff,y);  
+    
+    for (i=0;i<4;i++)  // top 4 bytes
+       buff[i]=h[110+i];   
+    for (i=4;i<56;i++)
+        buff[i]=0;
+    reverse(buff);
+    modimp(buff,x);    
+    
+    modmul(x,c,x); 
+    modadd(x,y,x); 
+    modmul(x,c,x); 
+    modadd(x,z,r);  
 }
 
-// test for infinity
-int ecn448isinf(point *P)
+// general purpose SHAKE256 hash function
+// Input ilen bytes, output olen bytes
+static void H(int ilen,int olen,char *s,char *digest)
 {
-    return (modis0(P->x) && modcmp(P->y,P->z));
+    sha3 SHA3;
+    SHA3_init(&SHA3,SHAKE256);
+    for (int i=0;i<ilen;i++) 
+        SHA3_process(&SHA3,s[i]);
+    SHA3_shake(&SHA3,digest,olen); 
 }
 
-// set to affine
-void ecn448affine(point *P)
+// Input private key - 57 random bytes
+// Output public key - 57 bytes
+void ED448_KEY_PAIR(char *prv,char *pub)
 {
-    spint I[Nlimbs];
-    if (modis0(P->z)) {
-        ecn448inf(P);
-        return;
-    }
-    modinv(P->z,NULL,I);
-    modone(P->z);
-    modmul(P->x,I,P->x);
-    modmul(P->y,I,P->y);
+    int sign;
+    point P;
+    ecn448gen(&P);
+    char s[BYTES];
+
+    H(BYTES+1,BYTES,prv,s);
+// clamp s
+    s[0]&=0xFC;
+    s[55]|=0x80;
+
+    reverse(s);  // little endian to big endian
+    ecn448mul(s,&P); 
+
+    sign=ecn448get(&P,NULL,pub);  // get y coordinate and sign
+    reverse(pub);              // big endian to little endian
+    pub[56]=(char)(sign<<7);
 }
 
-// move Q to P if d=1
-void ecn448cmv(int d,point *Q,point *P)
-{
-    modcmv(d,Q->x,P->x);
-    modcmv(d,Q->y,P->y);
-    modcmv(d,Q->z,P->z);
-}
+const char dom4[10]={'S','i','g','E','d','4','4','8',0,0};
 
-// return 1 if equal, else 0
-int ecn448cmp(point *P,point *Q)
+// input private key, public key, message to be signed. Output signature
+void ED448_SIGN(char *prv,char *pub,int mlen,char *m,char *sig)
 {
-    spint a[Nlimbs],b[Nlimbs];
-    modmul(P->x,Q->z,a);
-    modmul(Q->x,P->z,b);
-    if (!modcmp(a,b)) return 0;
-    modmul(P->y,Q->z,a);
-    modmul(Q->y,P->z,b);
-    if (!modcmp(a,b)) return 0;
-    return 1;
-}
+    int i,sign;
+    char h[2*BYTES+2];
+    char ipub[BYTES+1];
+    gel r,s,d;
+    sha3 SHA3;
+    point R;
+    ecn448gen(&R);
 
-// extract (x,y) from point, if y is NULL compress and just return x and sign of y, if x is NULL compress and just return y and sign of x
-int ecn448get(point *P,char *x,char *y)
-{
-    spint X[Nlimbs],Y[Nlimbs];
-    ecn448affine(P);
-    if (x!=NULL)
+    if (pub!=NULL)
     {
-        modcpy(P->x,X);
-        modexp(X,x);
+        for (i=0;i<BYTES+1;i++)
+            ipub[i]=pub[i];
+    } else {
+        ED448_KEY_PAIR(prv,ipub);
     }
-    if (y!=NULL)
-    {
-        modcpy(P->y,Y);
-        modexp(Y,y);
-    }
-    if (y==NULL) return modsign(P->y);
-    if (x==NULL) return modsign(P->x);
+
+    SHA3_init(&SHA3,SHAKE256);
+    H(BYTES+1,2*BYTES+2,prv,h);
+
+// derive and clamp s
+    h[0]&=0xFC;
+    h[55]|=0x80;
+    reverse(h); 
+    modimp(h,s);
+
+    for (i=0;i<10;i++)
+        SHA3_process(&SHA3,dom4[i]);
+    for (i=BYTES+1;i<2*BYTES+2;i++ )
+        SHA3_process(&SHA3,h[i]);
+    for (i=0;i<mlen;i++)
+        SHA3_process(&SHA3,m[i]);
+    SHA3_shake(&SHA3,h,2*BYTES+2); 
+
+    reduce(h,r);
+    modexp(r,h);  // convert to big endian array
+    ecn448mul(h,&R);
+
+    sign=ecn448get(&R,NULL,sig);  // get y coordinate and sign
+    reverse(sig);              // big endian to little endian
+    sig[BYTES]=(char)(sign<<7); // first part of signature
+
+    SHA3_init(&SHA3,SHAKE256);
+    for (i=0;i<10;i++)
+        SHA3_process(&SHA3,dom4[i]);
+    for (i=0;i<BYTES+1;i++ )
+        SHA3_process(&SHA3,sig[i]);  // R
+    for (i=0;i<BYTES+1;i++)
+        SHA3_process(&SHA3,ipub[i]);  // Q
+    for (i=0;i<mlen;i++)
+        SHA3_process(&SHA3,m[i]);   // M
+    SHA3_shake(&SHA3,h,2*BYTES+2); 
+
+    reduce(h,d);
+    modmul(d,s,d);
+    modadd(d,r,d);
+
+    modexp(d,&sig[BYTES+1]);
+    reverse(&sig[BYTES+1]);
+    sig[2*BYTES+1]=0;           // second part of signature
+}
+
+int ED448_VERIFY(char *pub,int mlen,char *m,char *sig) 
+{
+    int i;
+    char buff[BYTES];
+    point G,R,Q;
+    gel u;
+    int sign;
+    sha3 SHA3;
+    char h[2*BYTES+2];
+
+    ecn448gen(&G);
+
+// reconstruct point R
+    for (i=0;i<BYTES;i++)
+        buff[i]=sig[i];
+    reverse(buff);
+    sign=sig[BYTES]>>7;
+    ecn448set(sign,NULL,buff,&R);
+    if (ecn448isinf(&R)) return 0;
+
+// reconstruct point Q 
+    for (i=0;i<BYTES;i++)
+        buff[i]=pub[i];
+    reverse(buff);
+    sign=(pub[BYTES]>>7)&1;
+    ecn448set(sign,NULL,buff,&Q);
+    if (ecn448isinf(&Q)) return 0;
+
+    for (i=0;i<BYTES;i++)
+        buff[i]=sig[i+BYTES+1];
+    reverse(buff);
+
+    SHA3_init(&SHA3,SHAKE256);
+    for (i=0;i<10;i++)
+        SHA3_process(&SHA3,dom4[i]);
+    for (i=0;i<BYTES+1;i++ )
+        SHA3_process(&SHA3,sig[i]);  // R
+    for (int i=0;i<BYTES+1;i++)
+        SHA3_process(&SHA3,pub[i]);  // Q
+    for (i=0;i<mlen;i++)
+        SHA3_process(&SHA3,m[i]);   // M
+    SHA3_shake(&SHA3,h,2*BYTES+2); 
+
+    reduce(h,u); modneg(u,u); modexp(u,h);
+
+    if (!modimp(buff,u)) return 0;  // out of range
+
+    ecn448cof(&G); ecn448cof(&R); ecn448cof(&Q);
+    ecn448mul2(buff,&G,h,&Q,&Q);
+
+    if (ecn448cmp(&R,&Q))
+        return 1;
     return 0;
 }
 
-// general purpose set point function
-// sets P=O if point not on curve
-// if x and y are not NULL tries to set (x,y)
-// if y==NULL tries to set from x and sign s of y (decompression)
-// if x==NULL tries to set from y and sign s of x
-static void setxy(int s,const spint *x,const spint *y,point *P)
-{
-    spint X[Nlimbs],Y[Nlimbs],O[Nlimbs],U[Nlimbs],V[Nlimbs],H[Nlimbs];
-    modone(O);
-
-    if (x!=NULL && y!=NULL)
-    {
-        modsqr(x,X);
-        modsqr(y,Y);
-#if CONSTANT_A==-1
-        modsub(Y,X,U);
-#else
-        modadd(Y,X,U);  //lhs
-#endif
-        modmul(X,Y,V);  //rhs
-#ifdef CONSTANT_B
-#if CONSTANT_B>0
-        modmli(V,CONSTANT_B,V);
-        modadd(O,V,V); // V=1+dx^2
-#else
-        modmli(V,-CONSTANT_B,V);
-        modsub(O,V,V); // V=1-dx^2
-#endif      
-#else
-        modmul(V,constant_b,V);
-        modadd(O,V,V);
-#endif
-        modmul(U,O,U); modmul(V,O,V);
-        if (modcmp(U,V)) {
-            modcpy(x,P->x);
-            modcpy(y,P->y);
-            modone(P->z);
-        } else {
-            ecn448inf(P);
-        }
-        return;
-    }
-    if (y==NULL)
-    {
-        modsqr(x,X);
-#if CONSTANT_A==-1             // U=1-ax^2
-        modadd(O,X,U);
-#else
-        modsub(O,X,U); 
-#endif
-        modcpy(X,V);   // V=x^2
-    } else {
-        modsqr(y,Y);
-        modsub(O,Y,U); // U=1-y^2
-#if CONSTANT_A==-1
-        modneg(O,O);   // O=-1
-#endif
-        modcpy(Y,V);   // V=y^2
-    }
-#ifdef CONSTANT_B
-#if CONSTANT_B>0
-    modmli(V,CONSTANT_B,V);
-    modsub(O,V,V); // V=1-dV^2
-#else
-    modmli(V,-CONSTANT_B,V);
-    modadd(O,V,V); // V=1+dV^2
-#endif
-#else
-    modmul(V,constant_b,V);
-    modsub(O,V,V); // V=1-dV^2      
-#endif
-
-    modsqr(U,O);  // O=U^2
-    modmul(U,O,U); // U=U^3
-    modmul(U,V,U); // U=U^3*V
-    modpro(U,H);
-    if (!modqr(H,U))
-    { // point not on curve
-        ecn448inf(P);
-        return;
-    }
-    modsqrt(U,H,V); // V=sqrt
-    modinv(U,H,U);  // U=inv
-    modmul(U,V,U);
-    modmul(U,O,U);
-    int d=(modsign(U)-s)&1;
-    modneg(U,V);
-    modcmv(d,V,U);
-    if (y==NULL)
-    {
-        modcpy(U,P->y);
-        modcpy(x,P->x);
-    } else {
-        modcpy(U,P->x);
-        modcpy(y,P->y);
-    }
-    modone(P->z);
-}
-
-// multiply point by small curve cofactor (here assumed to be 4 or 8)
-void ecn448cof(point *P)
-{
-    int i;
-    for (i=0;i<COF;i++)
-        ecn448dbl(P);
-}
-
-// Is (x,y) of the right order? Must be checked by calling program!
-// api visible version, x and y are big endian byte arrays
-void ecn448set(int s,const char *x,const char *y,point *P)
-{
-    spint X[Nlimbs],Y[Nlimbs];
-    if (x!=NULL && y!=NULL)
-    {
-        modimp(x,X);
-        modimp(y,Y);
-        setxy(s,X,Y,P);
-        return;
-    }
-    if (x!=NULL)
-    {
-        modimp(x,X);
-        setxy(s,X,NULL,P);
-    }
-    if (y!=NULL)
-    {
-        modimp(y,Y);
-        setxy(s,NULL,Y,P);
-    }
-}
-
-// set generator
-void ecn448gen(point *P)
-{
-#ifdef CONSTANT_X
-    spint X[Nlimbs];
-    modint(CONSTANT_X,X);
-    setxy(0,X,NULL,P);
-#else
-    setxy(0,constant_x,constant_y,P);
-#endif
-}
-
-// select point from precomputed array in constant time
-static void select(int b,point W[],point *P)
-{
-    point MP;  
-    int m = b >> TOPBIT;
-    int babs = (b ^ m) - m;
-
-    ecn448cmv(teq(babs, 0),&W[0],P); // conditional move
-    ecn448cmv(teq(babs, 1),&W[1],P);
-    ecn448cmv(teq(babs, 2),&W[2],P);    
-    ecn448cmv(teq(babs, 3),&W[3],P);
-    ecn448cmv(teq(babs, 4),&W[4],P);
-    ecn448cmv(teq(babs, 5),&W[5],P);
-    ecn448cmv(teq(babs, 6),&W[6],P);    
-    ecn448cmv(teq(babs, 7),&W[7],P);
-    ecn448cmv(teq(babs, 8),&W[8],P);
-
-    ecn448cpy(P,&MP);
-    ecn448neg(&MP);  // minus P
-    ecn448cmv((int)(m & 1),&MP,P);
-}
-
-// convert to double naf form
-static void dnaf(const char *e,const char *f, signed char *w)
-{
-    int i,j,t;
-    unsigned char ce=0;
-    unsigned char cf=0;
-    unsigned char m,n,p,q;
-    for (i=0;i<Nbytes;i++)
-    {
-        m=n=e[Nbytes-i-1];
-        t=3*(int)n+ce;
-        ce=(unsigned char)(t>>8);
-        n=(unsigned char)(t&0xff);
-        p=q=f[Nbytes-i-1];
-        t=3*(int)q+cf;
-        cf=(unsigned char)(t>>8);
-        q=(unsigned char)(t&0xff);
-        for (j=0;j<8;j++)
-        {
-            w[8*i+j]=(n&1)-(m&1)+3*((q&1)-(p&1));
-            n>>=1; m>>=1; p>>=1; q>>=1;
-        }
-    }
-    for (j=0;j<8;j++)
-    {
-        w[8*Nbytes+j]=(ce&1)+3*(cf&1);
-        ce>>=1; cf>>=1;
-    }
-}
-
-// multiply point by scalar
-// constant time
-void ecn448mul(const char *e,point *P) 
-{
-    int i,j;
-    point Q,W[9];
-    signed char w[2*Nbytes+1];
-
-    ecn448inf(&Q);
-    ecn448inf(&W[0]);                         // O
-    ecn448cpy(P,&W[1]);                       // P
-    ecn448cpy(P,&W[2]); ecn448dbl(&W[2]);        // 2P
-    ecn448cpy(&W[2],&W[3]); ecn448add(P,&W[3]);  // 3P
-    ecn448cpy(&W[2],&W[4]); ecn448dbl(&W[4]);    // 4P
-    ecn448cpy(&W[4],&W[5]); ecn448add(P,&W[5]);  // 5P
-    ecn448cpy(&W[3],&W[6]); ecn448dbl(&W[6]);    // 6P
-    ecn448cpy(&W[6],&W[7]); ecn448add(P,&W[7]);  // 7P
-    ecn448cpy(&W[4],&W[8]); ecn448dbl(&W[8]);    // 8P
-
-// convert exponent to signed digit
-    for (i=j=0;i<Nbytes;i++,j+=2)
-    {
-        char c=e[Nbytes-i-1];
-        w[j]=c&0xf;
-        w[j+1]=(c>>4)&0xf;
-    }
-    w[2*Nbytes]=0;
-    for (j=0;j<2*Nbytes;j++)
-    {
-        int t=7-w[j];
-        int m=(t>>4)&1;
-        w[j]-=(m<<4);
-        w[j+1]+=m;
-    }
-
-//    printf("w= ");
-//    for (i=0;i<2*Nbytes+1;i++) printf(" %d",(int)w[i]);
-//    printf("\n");
-
-    select(w[2*Nbytes],W,P);
-    for (i = 2*Nbytes - 1; i >= 0; i--)
-    {
-        select(w[i],W,&Q);
-        ecn448dbl(P);
-        ecn448dbl(P);
-        ecn448dbl(P);
-        ecn448dbl(P);
-        ecn448add(&Q,P);
-    }
-}
-
-// double point multiplication R=eP+fQ
-// not constant time
-void ecn448mul2(const char *e,point *P,const char *f,point *Q,point *R)
-{
-    int i,j;
-    point W[5];
-    signed char w[8*Nbytes+8];
-    ecn448inf(&W[0]);     // O
-    ecn448cpy(P,&W[1]);   // P
-    ecn448cpy(Q,&W[3]);   // Q
-    ecn448cpy(Q,&W[2]); ecn448sub(P,&W[2]);  // Q-P
-    ecn448cpy(Q,&W[4]); ecn448add(P,&W[4]);  // Q+P
-
-    dnaf(e,f,w);
-
-    i=8*Nbytes+7;
-    while (w[i]==0) i--; // ignore leading zeros
-    ecn448inf(R);
-    while (i>=1)
-    {
-        ecn448dbl(R);
-        j=w[i];
-        if (j>0) ecn448add(&W[j],R);
-        if (j<0) ecn448sub(&W[-j],R);
-        i--;
-    }
-}
