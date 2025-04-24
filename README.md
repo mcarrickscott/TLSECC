@@ -35,6 +35,8 @@ Then copy into the *src* directory all files from the *rust64* directory. Build 
 
 	cargo build --release
 
+(as the Rust code uses wrapping arithmetic it will panic on integer overflow if run in Debug mode)
+
 To run a test programs, copy *libtlsecc.rlib* from the *target/release* directory into a working directory, along with the rust test programs from the *test* directory.
 
 	rustc tests256.rs --extern tlsecc=libtlsecc.rlib
