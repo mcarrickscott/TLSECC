@@ -244,12 +244,43 @@ extern void ED25519_SIGN(char *SK,char *PK,int mlen,char *m,char *sig);
 
 /** @brief Verify an Ed25519 signature
  *
-    @param PK an input random public key, 32 vytes
+    @param PK an input random public key, 32 bytes
     @param mlen the length of the input
     @param m an input message
     @param sig an input 64 byte signature
     @return true if signature is good, else false
  */
 extern int ED25519_VERIFY(char *PK,int mlen,char *m,char *sig);
+
+/**** Ed383 *****/
+
+/** @brief Generate an Ed383 key pair
+ *
+    @param compress set true for point compression
+    @param SK an input random 48-byte secret key
+    @param PK an output 48 byte public key
+ */
+extern void ED383_KEY_PAIR(char *SK,char *PK);
+
+/** @brief Generate an Ed383 EdDSA signature
+ *
+    @param SK an input 48-byte secret key
+    @param PK an input 48 byte public key
+    @param mlen the length of the input
+    @param m an input message
+    @param sig an output 96 byte signature
+ */
+extern void ED383_SIGN(char *SK,char *PK,int mlen,char *m,char *sig);
+
+/** @brief Verify an Ed383 signature
+ *
+    @param PK an input random public key, 48 bytes
+    @param mlen the length of the input
+    @param m an input message
+    @param sig an input 96 byte signature
+    @return true if signature is good, else false
+ */
+extern int ED383_VERIFY(char *PK,int mlen,char *m,char *sig);
+
 
 #endif

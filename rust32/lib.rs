@@ -11,3 +11,5 @@ pub mod ed448;
 pub mod edwards448;
 pub mod x25519;
 pub mod x448;
+pub mod ed383;
+pub mod edwards383;

@@ -1,5 +1,5 @@
 // Test vector from RFC8032
-// gcc -O2 tests25519.c s25519.c ed25519.c hash.c -o tests25519
+// gcc -O2 tests25519.c ed25519.c edwards25519.c hash.c -o tests25519
 
 #include <stdio.h>
 #include "tlsecc.h"

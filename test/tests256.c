@@ -1,5 +1,5 @@
 // test for FIPS 186-5 ECDSA Signature Generation
-// gcc -O2 tests256.c s256.c nist256.c hash.c -o tests256
+// gcc -O2 tests256.c nist256.c weiers256.c hash.c -o tests256
 
 #include <stdio.h>
 #include "tlsecc.h"

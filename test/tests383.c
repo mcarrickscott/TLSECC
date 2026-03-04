@@ -1,5 +1,6 @@
-// test for FIPS 186-5 ECDSA Signature Generation
-// gcc -O2 tests521.c nist521.c weiers521.c hash.c -o tests521
+
+// Test program for ed383 signature
+// gcc -O2 tests383.c ed383.c edwards383.c hash.c -o tests383
 
 #include <stdio.h>
 #include "tlsecc.h"
@@ -19,7 +20,7 @@ static int char2int(char input)
 static void fromHex(int ilen, const char *src, char *dst)
 {
     int i,lz,len=0;
-    char pad[300];
+    char pad[256];
     while (src[len]!=0) len++;
     lz=2*ilen-len;
     if (lz<0) lz=0;
@@ -58,37 +59,30 @@ static void toHex(int len, const char *src, char *dst)
     dst[2*len]='\0';
 }
 
-#define BYTES 66
+#define BYTES 48
 
+// Test vector
 int main()
 {
-    const char *sk= (const char *)"519b423d715f8b581f4fa8ee59f4771a5b44c8130b4e3eacca54a56dda72b464abababababababababababababababab3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e"; // 66 bytes
-    const char *ran=(const char *)"94a1bbb14b906a61a280f245f9e93c7f3b4a6247824f5d33b9670787642a68deb9670787642a68deabababababababababababababababab3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e"; // 66+8 bytes
-    const char *msg=(const char *)"44acf6b7e36c1342c2c5897204fe09504e1e2efb1a900377dbc4e7a6a133ec56"; // 32 byte message
-    char prv[BYTES],pub[2*BYTES+1];
-    char buff[512],m[BYTES],thm[BYTES],k[BYTES+8],sig[2*BYTES];
-    int res,compress=1;
-    printf("Run test vector\n");
+    const char *sk=(const char *)"c4eab05d357007c632f3dbb48489924d552b08fe0c353a0d4a1f00acda2c463afbea67c5e8d2877c5e3bc397a659949e";
+    char prv[BYTES],pub[BYTES],sig[2*BYTES];
+    char buff[256],m[2];
+    int res;
     printf("private key= "); puts(sk); 
     fromHex(BYTES,sk,prv);
-    fromHex(BYTES+8,ran,k);
-    fromHex(32,msg,m);
-    NIST521_KEY_PAIR(compress,prv,pub);
-    if (compress)
-        toHex(BYTES+1,pub,buff);
-    else
-        toHex(2*BYTES+1,pub,buff);
+    ED383_KEY_PAIR(prv,pub);
+    toHex(BYTES,pub,buff);
+    printf("public key=  "); puts(buff);
 
-    printf("public key= "); puts(buff);
-
-    NIST521_PREHASH(64,32,m,thm); // hash message using SHA256
-    NIST521_SIGN(prv,k,thm,sig);
+    m[0]=0x03; // message to be signed
+    ED383_SIGN(prv,pub,1,m,sig);
     toHex(2*BYTES,sig,buff);
-    printf("signature=  "); puts(buff);
+    printf("signature=  "); puts(buff); 
 
-    res=NIST521_VERIFY(pub,thm,sig);
+    res=ED383_VERIFY(pub,1,m,sig);
     if (res)
         printf("Signature is valid\n");
     else
         printf("Signature is NOT valid\n");
 }
+
