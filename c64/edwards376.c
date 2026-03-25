@@ -20,7 +20,7 @@
 
 
 // Automatically generated modular arithmetic C code
-// Command line : python montyms64.py ED383
+// Command line : python monty.py 64 ED376
 // Python Script by Mike Scott (Technology Innovation Institute, UAE, 2025)
 
 #include <stdint.h>
@@ -28,6 +28,8 @@
 
 #define sspint int64_t
 #define spint uint64_t
+#define dpint __uint128_t
+#define sdpint __int128_t
 #define Wordlength 64
 #define Nlimbs 7
 #define Radix 55
@@ -35,179 +37,7 @@
 #define Nbytes 48
 
 #define MONTGOMERY
-#define ED383
-
-#include <intrin.h>
-
-#define ARCH_X86_64 // remove for other architectures like ARM64 - Note umulh()
-                    // intrinsic is still required
-#ifndef ARCH_X86_64
-// t+=a*b
-static inline void accum(spint *tl, spint *th, spint a, spint b) {
-  spint wl, wh;
-  wl = a * b;
-  wh = __umulh(a, b);
-  *tl += wl;
-  *th += (*tl < wl);
-  *th += wh;
-}
-
-// t+=(a+b)*c
-static inline void accumx(spint *tl, spint *th, spint a, spint bl, spint bh,
-                          spint c) {
-  spint wl, wh, l, h;
-  l = a;
-  l += bl;
-  h = bh + (l < bl);
-  wl = l * c;
-  wh = __umulh(l, c) + h * c;
-  *tl += wl;
-  *th += (*tl < wl);
-  *th += wh;
-}
-
-// t>>s
-static inline void shiftr(spint *tl, spint *th, char s) {
-  *tl = ((*tl) >> s) | ((*th) << (64 - s));
-  *th = (*th) >> s;
-}
-
-// t<<s
-static inline void shiftl(spint *tl, spint *th, char s) {
-  *th = ((*th) << s) | ((*tl) >> (64 - s));
-  *tl = (*tl) << s;
-}
-
-// t+= (v<<s)
-static inline void accumsl(spint *tl, spint *th, spint v, char s) {
-  spint wl, wh;
-  wh = v >> (64 - s);
-  wl = v << s;
-  *tl += wl;
-  *th += (*tl < wl);
-  *th += wh;
-}
-
-// r=t>>s
-static inline spint shiftout(spint tl, spint th, char s) {
-  return (tl >> s) | (th << (64 - s));
-}
-
-// t+=s
-static inline void add(spint *tl, spint *th, spint sl, spint sh) {
-  *tl += sl;
-  *th += (*tl < sl);
-  *th += sh;
-}
-
-// t-=s
-static inline void sub(spint *tl, spint *th, spint sl, spint sh) {
-  pint l = *tl;
-  *tl -= sl;
-  *th -= ((*tl) > l);
-  *th -= sh;
-}
-
-// t=a*b
-static inline void mul(spint *tl, spint *th, spint a, spint b) {
-  *tl = a * b;
-  *th = __umulh(a, b);
-}
-
-// return high word of a*b
-static inline spint mulhi(spint a, spint b) { return __umulh(a, b); }
-
-// t*=m
-static inline void muli(spint *tl, spint *th, spint m) {
-  spint w = __umulh(*tl, m);
-  *tl = *tl * m;
-  *th = w + (*th) * m;
-}
-#else
-// t+=a*b
-static inline void accum(spint *tl, spint *th, spint a, spint b) {
-  unsigned char carry;
-  spint wl, wh;
-  wl = _mulx_u64(a, b, &wh);
-  carry = _addcarryx_u64(0, wl, *tl, tl);
-  _addcarryx_u64(carry, wh, *th, th);
-}
-
-// t+=(a+b)*c
-static inline void accumx(spint *tl, spint *th, spint a, spint bl, spint bh,
-                          spint c) {
-  unsigned char carry;
-  spint wl, wh, l, h;
-  carry = _addcarry_u64(0, a, bl, &l);
-  _addcarry_u64(carry, 0, bh, &h);
-  wl = _mulx_u64(l, c, &wh);
-  wh += h * c;
-  carry = _addcarryx_u64(0, wl, *tl, tl);
-  _addcarryx_u64(carry, wh, *th, th);
-}
-
-// t>>s
-static inline void shiftr(spint *tl, spint *th, char s) {
-  *tl = __shiftright128(*tl, *th, s);
-  *th = (*th >> s);
-}
-
-// t<<s
-static inline void shiftl(spint *tl, spint *th, char s) {
-  *th = __shiftleft128(*tl, *th, s);
-  *tl = (*tl << s);
-}
-
-// t+= (v<<s)
-static inline void accumsl(spint *tl, spint *th, spint v, char s) {
-  unsigned char carry;
-  spint l, h;
-  h = __shiftleft128(v, 0, s);
-  l = (v << s);
-  carry = _addcarry_u64(0, l, *tl, tl);
-  _addcarry_u64(carry, h, *th, th);
-}
-
-// r=t>>s
-static inline spint shiftout(spint tl, spint th, char s) {
-  return __shiftright128(tl, th, s);
-}
-
-// t+=s
-static inline void add(spint *tl, spint *th, spint sl, spint sh) {
-  unsigned char carry;
-  carry = _addcarryx_u64(0, *tl, sl, tl);
-  _addcarryx_u64(carry, *th, sh, th);
-}
-
-// t-=s
-static inline void sub(spint *tl, spint *th, spint sl, spint sh) {
-  unsigned char carry;
-  carry = _subborrow_u64(0, *tl, sl, tl);
-  _subborrow_u64(carry, *th, sh, th);
-}
-
-// t=a*b
-static inline void mul(spint *tl, spint *th, spint a, spint b) {
-  *tl = _mulx_u64(a, b, th);
-}
-
-// t=a*b
-static inline spint mulhi(spint a, spint b) {
-  spint r;
-  _mulx_u64(a, b, &r);
-  return r;
-}
-
-// t*=m
-static inline void muli(spint *tl, spint *th, spint m) {
-  unsigned char carry;
-  spint w;
-  *tl = _mulx_u64(*tl, m, &w);
-  *th = w + (*th) * m;
-}
-
-#endif
+#define ED376
 
 // propagate carries
 static spint inline prop(spint *n) {
@@ -295,189 +125,188 @@ static void inline modneg(const spint *b, spint *n) {
 // maximum possible = 9251314080475062396111552646217735
 // Modular multiplication, c=a*b mod 2p
 static void inline modmul(const spint *a, const spint *b, spint *c) {
-  spint tl = 0, th = 0;
+  dpint t = 0;
   spint p6 = 0x10400000000000u;
   spint q = ((spint)1 << 55u); // q is unsaturated radix
   spint mask = (spint)(q - (spint)1);
-  accum(&tl, &th, a[0], b[0]);
-  spint v0 = (tl & mask);
-  shiftr(&tl, &th, 55);
-  accum(&tl, &th, a[0], b[1]);
-  accum(&tl, &th, a[1], b[0]);
-  spint v1 = (tl & mask);
-  shiftr(&tl, &th, 55);
-  accum(&tl, &th, a[0], b[2]);
-  accum(&tl, &th, a[1], b[1]);
-  accum(&tl, &th, a[2], b[0]);
-  spint v2 = (tl & mask);
-  shiftr(&tl, &th, 55);
-  accum(&tl, &th, a[0], b[3]);
-  accum(&tl, &th, a[1], b[2]);
-  accum(&tl, &th, a[2], b[1]);
-  accum(&tl, &th, a[3], b[0]);
-  spint v3 = (tl & mask);
-  shiftr(&tl, &th, 55);
-  accum(&tl, &th, a[0], b[4]);
-  accum(&tl, &th, a[1], b[3]);
-  accum(&tl, &th, a[2], b[2]);
-  accum(&tl, &th, a[3], b[1]);
-  accum(&tl, &th, a[4], b[0]);
-  spint v4 = (tl & mask);
-  shiftr(&tl, &th, 55);
-  accum(&tl, &th, a[0], b[5]);
-  accum(&tl, &th, a[1], b[4]);
-  accum(&tl, &th, a[2], b[3]);
-  accum(&tl, &th, a[3], b[2]);
-  accum(&tl, &th, a[4], b[1]);
-  accum(&tl, &th, a[5], b[0]);
-  spint v5 = (tl & mask);
-  shiftr(&tl, &th, 55);
-  accum(&tl, &th, a[0], b[6]);
-  accum(&tl, &th, a[1], b[5]);
-  accum(&tl, &th, a[2], b[4]);
-  accum(&tl, &th, a[3], b[3]);
-  accum(&tl, &th, a[4], b[2]);
-  accum(&tl, &th, a[5], b[1]);
-  accum(&tl, &th, a[6], b[0]);
-  accum(&tl, &th, v0, p6);
-  spint v6 = (tl & mask);
-  shiftr(&tl, &th, 55);
-  accum(&tl, &th, a[1], b[6]);
-  accum(&tl, &th, a[2], b[5]);
-  accum(&tl, &th, a[3], b[4]);
-  accum(&tl, &th, a[4], b[3]);
-  accum(&tl, &th, a[5], b[2]);
-  accum(&tl, &th, a[6], b[1]);
-  accum(&tl, &th, v1, p6);
-  c[0] = (tl & mask);
-  shiftr(&tl, &th, 55);
-  accum(&tl, &th, a[2], b[6]);
-  accum(&tl, &th, a[3], b[5]);
-  accum(&tl, &th, a[4], b[4]);
-  accum(&tl, &th, a[5], b[3]);
-  accum(&tl, &th, a[6], b[2]);
-  accum(&tl, &th, v2, p6);
-  c[1] = (tl & mask);
-  shiftr(&tl, &th, 55);
-  accum(&tl, &th, a[3], b[6]);
-  accum(&tl, &th, a[4], b[5]);
-  accum(&tl, &th, a[5], b[4]);
-  accum(&tl, &th, a[6], b[3]);
-  accum(&tl, &th, v3, p6);
-  c[2] = (tl & mask);
-  shiftr(&tl, &th, 55);
-  accum(&tl, &th, a[4], b[6]);
-  accum(&tl, &th, a[5], b[5]);
-  accum(&tl, &th, a[6], b[4]);
-  accum(&tl, &th, v4, p6);
-  c[3] = (tl & mask);
-  shiftr(&tl, &th, 55);
-  accum(&tl, &th, a[5], b[6]);
-  accum(&tl, &th, a[6], b[5]);
-  accum(&tl, &th, v5, p6);
-  c[4] = (tl & mask);
-  shiftr(&tl, &th, 55);
-  accum(&tl, &th, a[6], b[6]);
-  accum(&tl, &th, v6, p6);
-  c[5] = (tl & mask);
-  shiftr(&tl, &th, 55);
-  c[6] = tl;
+  t += (dpint)a[0] * b[0];
+  spint v0 = ((spint)t & mask);
+  t >>= 55;
+  t += (dpint)a[0] * b[1];
+  t += (dpint)a[1] * b[0];
+  spint v1 = ((spint)t & mask);
+  t >>= 55;
+  t += (dpint)a[0] * b[2];
+  t += (dpint)a[1] * b[1];
+  t += (dpint)a[2] * b[0];
+  spint v2 = ((spint)t & mask);
+  t >>= 55;
+  t += (dpint)a[0] * b[3];
+  t += (dpint)a[1] * b[2];
+  t += (dpint)a[2] * b[1];
+  t += (dpint)a[3] * b[0];
+  spint v3 = ((spint)t & mask);
+  t >>= 55;
+  t += (dpint)a[0] * b[4];
+  t += (dpint)a[1] * b[3];
+  t += (dpint)a[2] * b[2];
+  t += (dpint)a[3] * b[1];
+  t += (dpint)a[4] * b[0];
+  spint v4 = ((spint)t & mask);
+  t >>= 55;
+  t += (dpint)a[0] * b[5];
+  t += (dpint)a[1] * b[4];
+  t += (dpint)a[2] * b[3];
+  t += (dpint)a[3] * b[2];
+  t += (dpint)a[4] * b[1];
+  t += (dpint)a[5] * b[0];
+  spint v5 = ((spint)t & mask);
+  t >>= 55;
+  t += (dpint)a[0] * b[6];
+  t += (dpint)a[1] * b[5];
+  t += (dpint)a[2] * b[4];
+  t += (dpint)a[3] * b[3];
+  t += (dpint)a[4] * b[2];
+  t += (dpint)a[5] * b[1];
+  t += (dpint)a[6] * b[0];
+  t += (dpint)v0 * (dpint)p6;
+  spint v6 = ((spint)t & mask);
+  t >>= 55;
+  t += (dpint)a[1] * b[6];
+  t += (dpint)a[2] * b[5];
+  t += (dpint)a[3] * b[4];
+  t += (dpint)a[4] * b[3];
+  t += (dpint)a[5] * b[2];
+  t += (dpint)a[6] * b[1];
+  t += (dpint)v1 * (dpint)p6;
+  c[0] = ((spint)t & mask);
+  t >>= 55;
+  t += (dpint)a[2] * b[6];
+  t += (dpint)a[3] * b[5];
+  t += (dpint)a[4] * b[4];
+  t += (dpint)a[5] * b[3];
+  t += (dpint)a[6] * b[2];
+  t += (dpint)v2 * (dpint)p6;
+  c[1] = ((spint)t & mask);
+  t >>= 55;
+  t += (dpint)a[3] * b[6];
+  t += (dpint)a[4] * b[5];
+  t += (dpint)a[5] * b[4];
+  t += (dpint)a[6] * b[3];
+  t += (dpint)v3 * (dpint)p6;
+  c[2] = ((spint)t & mask);
+  t >>= 55;
+  t += (dpint)a[4] * b[6];
+  t += (dpint)a[5] * b[5];
+  t += (dpint)a[6] * b[4];
+  t += (dpint)v4 * (dpint)p6;
+  c[3] = ((spint)t & mask);
+  t >>= 55;
+  t += (dpint)a[5] * b[6];
+  t += (dpint)a[6] * b[5];
+  t += (dpint)v5 * (dpint)p6;
+  c[4] = ((spint)t & mask);
+  t >>= 55;
+  t += (dpint)a[6] * b[6];
+  t += (dpint)v6 * (dpint)p6;
+  c[5] = ((spint)t & mask);
+  t >>= 55;
+  c[6] = (spint)t;
 }
 
 // Modular squaring, c=a*a  mod 2p
 static void inline modsqr(const spint *a, spint *c) {
-  spint totl, toth;
-  spint tl = 0, th = 0;
+  dpint tot;
+  dpint t = 0;
   spint p6 = 0x10400000000000u;
   spint q = ((spint)1 << 55u); // q is unsaturated radix
   spint mask = (spint)(q - (spint)1);
-  mul(&totl, &toth, a[0], a[0]);
-  tl = totl;
-  th = toth;
-  spint v0 = (tl & mask);
-  shiftr(&tl, &th, 55);
-  mul(&totl, &toth, a[0], a[1]);
-  add(&totl, &toth, totl, toth);
-  add(&tl, &th, totl, toth);
-  spint v1 = (tl & mask);
-  shiftr(&tl, &th, 55);
-  mul(&totl, &toth, a[0], a[2]);
-  add(&totl, &toth, totl, toth);
-  accum(&totl, &toth, a[1], a[1]);
-  add(&tl, &th, totl, toth);
-  spint v2 = (tl & mask);
-  shiftr(&tl, &th, 55);
-  mul(&totl, &toth, a[0], a[3]);
-  accum(&totl, &toth, a[1], a[2]);
-  add(&totl, &toth, totl, toth);
-  add(&tl, &th, totl, toth);
-  spint v3 = (tl & mask);
-  shiftr(&tl, &th, 55);
-  mul(&totl, &toth, a[0], a[4]);
-  accum(&totl, &toth, a[1], a[3]);
-  add(&totl, &toth, totl, toth);
-  accum(&totl, &toth, a[2], a[2]);
-  add(&tl, &th, totl, toth);
-  spint v4 = (tl & mask);
-  shiftr(&tl, &th, 55);
-  mul(&totl, &toth, a[0], a[5]);
-  accum(&totl, &toth, a[1], a[4]);
-  accum(&totl, &toth, a[2], a[3]);
-  add(&totl, &toth, totl, toth);
-  add(&tl, &th, totl, toth);
-  spint v5 = (tl & mask);
-  shiftr(&tl, &th, 55);
-  mul(&totl, &toth, a[0], a[6]);
-  accum(&totl, &toth, a[1], a[5]);
-  accum(&totl, &toth, a[2], a[4]);
-  add(&totl, &toth, totl, toth);
-  accum(&totl, &toth, a[3], a[3]);
-  add(&tl, &th, totl, toth);
-  accum(&tl, &th, v0, p6);
-  spint v6 = (tl & mask);
-  shiftr(&tl, &th, 55);
-  mul(&totl, &toth, a[1], a[6]);
-  accum(&totl, &toth, a[2], a[5]);
-  accum(&totl, &toth, a[3], a[4]);
-  add(&totl, &toth, totl, toth);
-  add(&tl, &th, totl, toth);
-  accum(&tl, &th, v1, p6);
-  c[0] = (tl & mask);
-  shiftr(&tl, &th, 55);
-  mul(&totl, &toth, a[2], a[6]);
-  accum(&totl, &toth, a[3], a[5]);
-  add(&totl, &toth, totl, toth);
-  accum(&totl, &toth, a[4], a[4]);
-  add(&tl, &th, totl, toth);
-  accum(&tl, &th, v2, p6);
-  c[1] = (tl & mask);
-  shiftr(&tl, &th, 55);
-  mul(&totl, &toth, a[3], a[6]);
-  accum(&totl, &toth, a[4], a[5]);
-  add(&totl, &toth, totl, toth);
-  add(&tl, &th, totl, toth);
-  accum(&tl, &th, v3, p6);
-  c[2] = (tl & mask);
-  shiftr(&tl, &th, 55);
-  mul(&totl, &toth, a[4], a[6]);
-  add(&totl, &toth, totl, toth);
-  accum(&totl, &toth, a[5], a[5]);
-  add(&tl, &th, totl, toth);
-  accum(&tl, &th, v4, p6);
-  c[3] = (tl & mask);
-  shiftr(&tl, &th, 55);
-  mul(&totl, &toth, a[5], a[6]);
-  add(&totl, &toth, totl, toth);
-  add(&tl, &th, totl, toth);
-  accum(&tl, &th, v5, p6);
-  c[4] = (tl & mask);
-  shiftr(&tl, &th, 55);
-  mul(&totl, &toth, a[6], a[6]);
-  add(&tl, &th, totl, toth);
-  accum(&tl, &th, v6, p6);
-  c[5] = (tl & mask);
-  shiftr(&tl, &th, 55);
-  c[6] = tl;
+  tot = (dpint)a[0] * a[0];
+  t = tot;
+  spint v0 = ((spint)t & mask);
+  t >>= 55;
+  tot = (dpint)a[0] * a[1];
+  tot *= 2;
+  t += tot;
+  spint v1 = ((spint)t & mask);
+  t >>= 55;
+  tot = (dpint)a[0] * a[2];
+  tot *= 2;
+  tot += (dpint)a[1] * a[1];
+  t += tot;
+  spint v2 = ((spint)t & mask);
+  t >>= 55;
+  tot = (dpint)a[0] * a[3];
+  tot += (dpint)a[1] * a[2];
+  tot *= 2;
+  t += tot;
+  spint v3 = ((spint)t & mask);
+  t >>= 55;
+  tot = (dpint)a[0] * a[4];
+  tot += (dpint)a[1] * a[3];
+  tot *= 2;
+  tot += (dpint)a[2] * a[2];
+  t += tot;
+  spint v4 = ((spint)t & mask);
+  t >>= 55;
+  tot = (dpint)a[0] * a[5];
+  tot += (dpint)a[1] * a[4];
+  tot += (dpint)a[2] * a[3];
+  tot *= 2;
+  t += tot;
+  spint v5 = ((spint)t & mask);
+  t >>= 55;
+  tot = (dpint)a[0] * a[6];
+  tot += (dpint)a[1] * a[5];
+  tot += (dpint)a[2] * a[4];
+  tot *= 2;
+  tot += (dpint)a[3] * a[3];
+  t += tot;
+  t += (dpint)v0 * p6;
+  spint v6 = ((spint)t & mask);
+  t >>= 55;
+  tot = (dpint)a[1] * a[6];
+  tot += (dpint)a[2] * a[5];
+  tot += (dpint)a[3] * a[4];
+  tot *= 2;
+  t += tot;
+  t += (dpint)v1 * p6;
+  c[0] = ((spint)t & mask);
+  t >>= 55;
+  tot = (dpint)a[2] * a[6];
+  tot += (dpint)a[3] * a[5];
+  tot *= 2;
+  tot += (dpint)a[4] * a[4];
+  t += tot;
+  t += (dpint)v2 * p6;
+  c[1] = ((spint)t & mask);
+  t >>= 55;
+  tot = (dpint)a[3] * a[6];
+  tot += (dpint)a[4] * a[5];
+  tot *= 2;
+  t += tot;
+  t += (dpint)v3 * p6;
+  c[2] = ((spint)t & mask);
+  t >>= 55;
+  tot = (dpint)a[4] * a[6];
+  tot *= 2;
+  tot += (dpint)a[5] * a[5];
+  t += tot;
+  t += (dpint)v4 * p6;
+  c[3] = ((spint)t & mask);
+  t >>= 55;
+  tot = (dpint)a[5] * a[6];
+  tot *= 2;
+  t += tot;
+  t += (dpint)v5 * p6;
+  c[4] = ((spint)t & mask);
+  t >>= 55;
+  tot = (dpint)a[6] * a[6];
+  t += tot;
+  t += (dpint)v6 * p6;
+  c[5] = ((spint)t & mask);
+  t >>= 55;
+  c[6] = (spint)t;
 }
 
 // copy
@@ -646,35 +475,36 @@ static void modint(int x, spint *a) {
 }
 
 // Modular multiplication by an integer, c=a*b mod 2p
+// uses special method for trinomials, otherwise Barrett-Dhem reduction
 static void inline modmli(const spint *a, int b, spint *c) {
   spint p6 = 0x10400000000000u;
   spint mask = ((spint)1 << 55u) - (spint)1;
-  spint tl = 0, th = 0;
+  dpint t = 0;
   spint q, h, r = 0xfc0fc0fc0fc0fc;
-  accum(&tl, &th, a[0], b);
-  c[0] = tl & mask;
-  shiftr(&tl, &th, 55u);
-  accum(&tl, &th, a[1], b);
-  c[1] = tl & mask;
-  shiftr(&tl, &th, 55u);
-  accum(&tl, &th, a[2], b);
-  c[2] = tl & mask;
-  shiftr(&tl, &th, 55u);
-  accum(&tl, &th, a[3], b);
-  c[3] = tl & mask;
-  shiftr(&tl, &th, 55u);
-  accum(&tl, &th, a[4], b);
-  c[4] = tl & mask;
-  shiftr(&tl, &th, 55u);
-  accum(&tl, &th, a[5], b);
-  c[5] = tl & mask;
-  shiftr(&tl, &th, 55u);
-  accum(&tl, &th, a[6], b);
-  c[6] = tl;
+  t += (dpint)a[0] * (dpint)b;
+  c[0] = (spint)t & mask;
+  t = t >> 55u;
+  t += (dpint)a[1] * (dpint)b;
+  c[1] = (spint)t & mask;
+  t = t >> 55u;
+  t += (dpint)a[2] * (dpint)b;
+  c[2] = (spint)t & mask;
+  t = t >> 55u;
+  t += (dpint)a[3] * (dpint)b;
+  c[3] = (spint)t & mask;
+  t = t >> 55u;
+  t += (dpint)a[4] * (dpint)b;
+  c[4] = (spint)t & mask;
+  t = t >> 55u;
+  t += (dpint)a[5] * (dpint)b;
+  c[5] = (spint)t & mask;
+  t = t >> 55u;
+  t += (dpint)a[6] * (dpint)b;
+  c[6] = (spint)t;
 
   // Barrett-Dhem reduction
-  h = shiftout(tl, th, 44u);
-  q = mulhi(h, r);
+  h = (spint)(t >> 44u);
+  q = (spint)(((dpint)h * (dpint)r) >> 64u);
   c[0] += q;
   c[6] -= q * p6;
 }
@@ -767,6 +597,20 @@ static int modshr(unsigned int n, spint *a) {
   return r;
 }
 
+// divide by 2. Shift right 1 bit (or add p and shift right one bit)
+static void modhaf(spint *n) {
+  int lsb;
+  spint t[7];
+  (void)prop(n);
+  modcpy(n, t);
+  lsb = modshr(1, t);
+  n[0] -= (spint)1;
+  n[6] += ((spint)0x10400000000000u);
+  (void)prop(n);
+  modshr(1, n);
+  modcmv(1 - lsb, t, n);
+}
+
 // set a= 2^r
 static void mod2r(unsigned int r, spint *a) {
   unsigned int n = r / 55u;
@@ -828,7 +672,7 @@ static int modcmp(const spint *a, const spint *b) {
 
 /*** End of automatically generated code ***/
 
-#include "Ed383curve.h"
+#include "Ed376curve.h"
 
 #define BYTES Nbytes
 #define LIMBS Nlimbs
@@ -856,7 +700,7 @@ static int teq(int b, int c)
 }
 
 // copy point
-void ecn_ed383_cpy(point *Q,point *P)
+void ecn_ed376_cpy(point *Q,point *P)
 {
     modcpy(Q->x,P->x);
     modcpy(Q->y,P->y);
@@ -864,7 +708,7 @@ void ecn_ed383_cpy(point *Q,point *P)
 }
 
 // randomize projective point
-void ecn_ed383_ran(int r,point *P)
+void ecn_ed376_ran(int r,point *P)
 {
     if (r>1)
     {
@@ -875,14 +719,14 @@ void ecn_ed383_ran(int r,point *P)
 }
 
 // negate P
-void ecn_ed383_neg(point *P)
+void ecn_ed376_neg(point *P)
 {
     modneg(P->x,P->x);
 }
 
 // add Q to P
 // standard projective method from EFD - https://www.hyperelliptic.org/EFD/
-void ecn_ed383_add(point *Q,point *P)
+void ecn_ed376_add(point *Q,point *P)
 {
     spint A[Nlimbs],B[Nlimbs],C[Nlimbs],D[Nlimbs],E[Nlimbs],F[Nlimbs],G[Nlimbs];
     modmul(Q->z,P->z,A);
@@ -923,16 +767,16 @@ void ecn_ed383_add(point *Q,point *P)
 }
 
 // subtract Q from P
-void ecn_ed383_sub(point *Q,point *P)
+void ecn_ed376_sub(point *Q,point *P)
 {
     point W;
-    ecn_ed383_cpy(Q,&W); ecn_ed383_neg(&W);
-    ecn_ed383_add(&W,P);
+    ecn_ed376_cpy(Q,&W); ecn_ed376_neg(&W);
+    ecn_ed376_add(&W,P);
 }
 
 // double P
 // standard projective method from EFD - https://www.hyperelliptic.org/EFD/
-void ecn_ed383_dbl(point *P)
+void ecn_ed376_dbl(point *P)
 {
     spint B[Nlimbs],C[Nlimbs],D[Nlimbs],E[Nlimbs],F[Nlimbs],H[Nlimbs],J[Nlimbs];
     modadd(P->x,P->y,B);
@@ -979,7 +823,7 @@ void ecn_ed383_dbl(point *P)
 */
 
 // set to infinity
-void ecn_ed383_inf(point *P)
+void ecn_ed376_inf(point *P)
 {
     modzer(P->x);
     modone(P->y);
@@ -987,17 +831,17 @@ void ecn_ed383_inf(point *P)
 }
 
 // test for infinity
-int ecn_ed383_isinf(point *P)
+int ecn_ed376_isinf(point *P)
 {
     return (modis0(P->x) && modcmp(P->y,P->z));
 }
 
 // set to affine
-void ecn_ed383_affine(point *P)
+void ecn_ed376_affine(point *P)
 {
     spint I[Nlimbs];
     if (modis0(P->z)) {
-        ecn_ed383_inf(P);
+        ecn_ed376_inf(P);
         return;
     }
     modinv(P->z,NULL,I);
@@ -1007,7 +851,7 @@ void ecn_ed383_affine(point *P)
 }
 
 // move Q to P if d=1
-void ecn_ed383_cmv(int d,point *Q,point *P)
+void ecn_ed376_cmv(int d,point *Q,point *P)
 {
     modcmv(d,Q->x,P->x);
     modcmv(d,Q->y,P->y);
@@ -1015,7 +859,7 @@ void ecn_ed383_cmv(int d,point *Q,point *P)
 }
 
 // return 1 if equal, else 0
-int ecn_ed383_cmp(point *P,point *Q)
+int ecn_ed376_cmp(point *P,point *Q)
 {
     spint a[Nlimbs],b[Nlimbs];
     modmul(P->x,Q->z,a);
@@ -1028,10 +872,10 @@ int ecn_ed383_cmp(point *P,point *Q)
 }
 
 // extract (x,y) from point, if y is NULL compress and just return x and sign of y, if x is NULL compress and just return y and sign of x
-int ecn_ed383_get(point *P,char *x,char *y)
+int ecn_ed376_get(point *P,char *x,char *y)
 {
     spint X[Nlimbs],Y[Nlimbs];
-    ecn_ed383_affine(P);
+    ecn_ed376_affine(P);
     if (x!=NULL)
     {
         modcpy(P->x,X);
@@ -1085,7 +929,7 @@ static void setxy(int s,const spint *x,const spint *y,point *P)
             modcpy(y,P->y);
             modone(P->z);
         } else {
-            ecn_ed383_inf(P);
+            ecn_ed376_inf(P);
         }
         return;
     }
@@ -1125,7 +969,7 @@ static void setxy(int s,const spint *x,const spint *y,point *P)
     modpro(U,H);
     if (!modqr(H,U))
     { // point not on curve
-        ecn_ed383_inf(P);
+        ecn_ed376_inf(P);
         return;
     }
     modsqrt(U,H,V); // V=sqrt
@@ -1147,16 +991,16 @@ static void setxy(int s,const spint *x,const spint *y,point *P)
 }
 
 // multiply point by small curve cofactor (here assumed to be 4 or 8)
-void ecn_ed383_cof(point *P)
+void ecn_ed376_cof(point *P)
 {
     int i;
     for (i=0;i<COF;i++)
-        ecn_ed383_dbl(P);
+        ecn_ed376_dbl(P);
 }
 
 // Is (x,y) of the right order? Must be checked by calling program!
 // api visible version, x and y are big endian byte arrays
-void ecn_ed383_set(int s,const char *x,const char *y,point *P)
+void ecn_ed376_set(int s,const char *x,const char *y,point *P)
 {
     spint X[Nlimbs],Y[Nlimbs];
     if (x!=NULL && y!=NULL)
@@ -1179,7 +1023,7 @@ void ecn_ed383_set(int s,const char *x,const char *y,point *P)
 }
 
 // set generator
-void ecn_ed383_gen(point *P)
+void ecn_ed376_gen(point *P)
 {
 #ifdef CONSTANT_X
     spint X[Nlimbs];
@@ -1197,19 +1041,19 @@ static void select(int b,point W[],point *P)
     int m = b >> TOPBIT;
     int babs = (b ^ m) - m;
 
-    ecn_ed383_cmv(teq(babs, 0),&W[0],P); // conditional move
-    ecn_ed383_cmv(teq(babs, 1),&W[1],P);
-    ecn_ed383_cmv(teq(babs, 2),&W[2],P);    
-    ecn_ed383_cmv(teq(babs, 3),&W[3],P);
-    ecn_ed383_cmv(teq(babs, 4),&W[4],P);
-    ecn_ed383_cmv(teq(babs, 5),&W[5],P);
-    ecn_ed383_cmv(teq(babs, 6),&W[6],P);    
-    ecn_ed383_cmv(teq(babs, 7),&W[7],P);
-    ecn_ed383_cmv(teq(babs, 8),&W[8],P);
+    ecn_ed376_cmv(teq(babs, 0),&W[0],P); // conditional move
+    ecn_ed376_cmv(teq(babs, 1),&W[1],P);
+    ecn_ed376_cmv(teq(babs, 2),&W[2],P);    
+    ecn_ed376_cmv(teq(babs, 3),&W[3],P);
+    ecn_ed376_cmv(teq(babs, 4),&W[4],P);
+    ecn_ed376_cmv(teq(babs, 5),&W[5],P);
+    ecn_ed376_cmv(teq(babs, 6),&W[6],P);    
+    ecn_ed376_cmv(teq(babs, 7),&W[7],P);
+    ecn_ed376_cmv(teq(babs, 8),&W[8],P);
 
-    ecn_ed383_cpy(P,&MP);
-    ecn_ed383_neg(&MP);  // minus P
-    ecn_ed383_cmv((int)(m & 1),&MP,P);
+    ecn_ed376_cpy(P,&MP);
+    ecn_ed376_neg(&MP);  // minus P
+    ecn_ed376_cmv((int)(m & 1),&MP,P);
 }
 
 // convert to double naf form
@@ -1244,22 +1088,22 @@ static void dnaf(const char *e,const char *f, signed char *w)
 
 // multiply point by scalar
 // constant time
-void ecn_ed383_mul(const char *e,point *P) 
+void ecn_ed376_mul(const char *e,point *P) 
 {
     int i,j;
     point Q,W[9];
     signed char w[2*Nbytes+1];
 
-    ecn_ed383_inf(&Q);
-    ecn_ed383_inf(&W[0]);                         // O
-    ecn_ed383_cpy(P,&W[1]);                       // P
-    ecn_ed383_cpy(P,&W[2]); ecn_ed383_dbl(&W[2]);        // 2P
-    ecn_ed383_cpy(&W[2],&W[3]); ecn_ed383_add(P,&W[3]);  // 3P
-    ecn_ed383_cpy(&W[2],&W[4]); ecn_ed383_dbl(&W[4]);    // 4P
-    ecn_ed383_cpy(&W[4],&W[5]); ecn_ed383_add(P,&W[5]);  // 5P
-    ecn_ed383_cpy(&W[3],&W[6]); ecn_ed383_dbl(&W[6]);    // 6P
-    ecn_ed383_cpy(&W[6],&W[7]); ecn_ed383_add(P,&W[7]);  // 7P
-    ecn_ed383_cpy(&W[4],&W[8]); ecn_ed383_dbl(&W[8]);    // 8P
+    ecn_ed376_inf(&Q);
+    ecn_ed376_inf(&W[0]);                         // O
+    ecn_ed376_cpy(P,&W[1]);                       // P
+    ecn_ed376_cpy(P,&W[2]); ecn_ed376_dbl(&W[2]);        // 2P
+    ecn_ed376_cpy(&W[2],&W[3]); ecn_ed376_add(P,&W[3]);  // 3P
+    ecn_ed376_cpy(&W[2],&W[4]); ecn_ed376_dbl(&W[4]);    // 4P
+    ecn_ed376_cpy(&W[4],&W[5]); ecn_ed376_add(P,&W[5]);  // 5P
+    ecn_ed376_cpy(&W[3],&W[6]); ecn_ed376_dbl(&W[6]);    // 6P
+    ecn_ed376_cpy(&W[6],&W[7]); ecn_ed376_add(P,&W[7]);  // 7P
+    ecn_ed376_cpy(&W[4],&W[8]); ecn_ed376_dbl(&W[8]);    // 8P
 
 // convert exponent to signed digit
     for (i=j=0;i<Nbytes;i++,j+=2)
@@ -1285,38 +1129,38 @@ void ecn_ed383_mul(const char *e,point *P)
     for (i = 2*Nbytes - 1; i >= 0; i--)
     {
         select(w[i],W,&Q);
-        ecn_ed383_dbl(P);
-        ecn_ed383_dbl(P);
-        ecn_ed383_dbl(P);
-        ecn_ed383_dbl(P);
-        ecn_ed383_add(&Q,P);
+        ecn_ed376_dbl(P);
+        ecn_ed376_dbl(P);
+        ecn_ed376_dbl(P);
+        ecn_ed376_dbl(P);
+        ecn_ed376_add(&Q,P);
     }
 }
 
 // double point multiplication R=eP+fQ
 // not constant time
-void ecn_ed383_mul2(const char *e,point *P,const char *f,point *Q,point *R)
+void ecn_ed376_mul2(const char *e,point *P,const char *f,point *Q,point *R)
 {
     int i,j;
     point W[5];
     signed char w[8*Nbytes+8];
-    ecn_ed383_inf(&W[0]);     // O
-    ecn_ed383_cpy(P,&W[1]);   // P
-    ecn_ed383_cpy(Q,&W[3]);   // Q
-    ecn_ed383_cpy(Q,&W[2]); ecn_ed383_sub(P,&W[2]);  // Q-P
-    ecn_ed383_cpy(Q,&W[4]); ecn_ed383_add(P,&W[4]);  // Q+P
+    ecn_ed376_inf(&W[0]);     // O
+    ecn_ed376_cpy(P,&W[1]);   // P
+    ecn_ed376_cpy(Q,&W[3]);   // Q
+    ecn_ed376_cpy(Q,&W[2]); ecn_ed376_sub(P,&W[2]);  // Q-P
+    ecn_ed376_cpy(Q,&W[4]); ecn_ed376_add(P,&W[4]);  // Q+P
 
     dnaf(e,f,w);
 
     i=8*Nbytes+7;
     while (w[i]==0) i--; // ignore leading zeros
-    ecn_ed383_inf(R);
+    ecn_ed376_inf(R);
     while (i>=1)
     {
-        ecn_ed383_dbl(R);
+        ecn_ed376_dbl(R);
         j=w[i];
-        if (j>0) ecn_ed383_add(&W[j],R);
-        if (j<0) ecn_ed383_sub(&W[-j],R);
+        if (j>0) ecn_ed376_add(&W[j],R);
+        if (j<0) ecn_ed376_sub(&W[-j],R);
         i--;
     }
 }

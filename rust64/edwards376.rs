@@ -20,7 +20,7 @@
 /*** Insert automatically generated code for modulus field.rs here ***/
 
 //Automatically generated modular arithmetic Rust code
-//Command line : python monty_rust.py 64 ED383
+//Command line : python monty_rust.py 64 ED376
 //Python Script by Mike Scott (Technology Innovation Institute, UAE, 2025)
 
 type SPINT = u64;

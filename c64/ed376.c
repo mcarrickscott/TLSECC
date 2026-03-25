@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include "hash.h"  // Some useful hash functions
 
-#include "Ed383curve.h" // elliptic curve API
+#include "Ed376curve.h" // elliptic curve API
 
 /*** Insert code automatically generated from group.c here ***/
 /* Note that much of this code is not needed and can be deleted */
@@ -922,12 +922,12 @@ static void H(int ilen,int olen,char *s,char *digest)
 
 // Input private key
 // Output public key
-void ED383_KEY_PAIR(char *prv,char *pub)
+void ED376_KEY_PAIR(char *prv,char *pub)
 {
     int sign;
     point P;
     char s[BYTES];
-    ecn_ed383_gen(&P);  // get curve generator point
+    ecn_ed376_gen(&P);  // get curve generator point
 
     H(BYTES,BYTES,prv,s);
 // clamp s
@@ -935,9 +935,9 @@ void ED383_KEY_PAIR(char *prv,char *pub)
     s[47]&=0x7F; s[47]|=0x40;
 
     reverse(s);  // little endian to big endian
-    ecn_ed383_mul(s,&P); 
+    ecn_ed376_mul(s,&P); 
 
-    sign=ecn_ed383_get(&P,NULL,pub);  // get y coordinate and sign
+    sign=ecn_ed376_get(&P,NULL,pub);  // get y coordinate and sign
     reverse(pub);              // big endian to little endian
     pub[47]|=(char)(sign<<7);
 }
@@ -955,7 +955,7 @@ static const char dom4[10]={'S','i','g','E','d','3','8','3',0,0};
 
 // input private key, per-message random number (or public key), message length, message to be signed
 // Output signature.
-void ED383_SIGN(char *prv,char *pub,int mlen,char *m,char *sig)
+void ED376_SIGN(char *prv,char *pub,int mlen,char *m,char *sig)
 {
     int i,sign;
     char h[2*BYTES];
@@ -963,14 +963,14 @@ void ED383_SIGN(char *prv,char *pub,int mlen,char *m,char *sig)
     sha3 SHA3;
     point R;
     gel r,s,d;     // some group elements..
-    ecn_ed383_gen(&R);  // get curve generator point
+    ecn_ed376_gen(&R);  // get curve generator point
 
     if (pub!=NULL)
     {
         for (i=0;i<BYTES;i++)
             ipub[i]=pub[i];
     } else {
-        ED383_KEY_PAIR(prv,ipub);
+        ED376_KEY_PAIR(prv,ipub);
     }
 
     SHA3_init(&SHA3,SHAKE256);
@@ -992,9 +992,9 @@ void ED383_SIGN(char *prv,char *pub,int mlen,char *m,char *sig)
 
     reduce(h,r);
     modexp(r,h);  // convert to big endian array
-    ecn_ed383_mul(h,&R);
+    ecn_ed376_mul(h,&R);
 
-    sign=ecn_ed383_get(&R,NULL,sig);  // get y coordinate and sign
+    sign=ecn_ed376_get(&R,NULL,sig);  // get y coordinate and sign
     reverse(sig);              // big endian to little endian
     sig[BYTES-1]|=(char)(sign<<7); // first part of signature
 
@@ -1019,7 +1019,7 @@ void ED383_SIGN(char *prv,char *pub,int mlen,char *m,char *sig)
 
 // input public key, message length message and signature. 
 // Return 1 for success, 0 for failure
-int ED383_VERIFY(char *pub,int mlen,char *m,char *sig) 
+int ED376_VERIFY(char *pub,int mlen,char *m,char *sig) 
 {
     int i;
     point G,R,Q;
@@ -1029,7 +1029,7 @@ int ED383_VERIFY(char *pub,int mlen,char *m,char *sig)
     char h[2*BYTES];
     char buff[BYTES];
 
-    ecn_ed383_gen(&G);  // get curve generator point
+    ecn_ed376_gen(&G);  // get curve generator point
 
 // reconstruct point R
     sign=(sig[BYTES-1]>>7)&1; 
@@ -1037,8 +1037,8 @@ int ED383_VERIFY(char *pub,int mlen,char *m,char *sig)
         buff[i]=sig[i];
     buff[BYTES-1]&=0x7f;
     reverse(buff);
-    ecn_ed383_set(sign,NULL,buff,&R);
-    if (ecn_ed383_isinf(&R)) return 0;
+    ecn_ed376_set(sign,NULL,buff,&R);
+    if (ecn_ed376_isinf(&R)) return 0;
 
 // reconstruct point Q 
     sign=(pub[BYTES-1]>>7)&1;
@@ -1046,8 +1046,8 @@ int ED383_VERIFY(char *pub,int mlen,char *m,char *sig)
         buff[i]=pub[i];
     buff[BYTES-1]&=0x7f;
     reverse(buff);
-    ecn_ed383_set(sign,NULL,buff,&Q); 
-    if (ecn_ed383_isinf(&Q)) return 0;
+    ecn_ed376_set(sign,NULL,buff,&Q); 
+    if (ecn_ed376_isinf(&Q)) return 0;
 
     for (i=0;i<BYTES;i++)
         buff[i]=sig[i+BYTES];
@@ -1068,10 +1068,10 @@ int ED383_VERIFY(char *pub,int mlen,char *m,char *sig)
 
     if (!modimp(buff,u)) return 0;  // out of range
 
-    ecn_ed383_cof(&G); ecn_ed383_cof(&R); ecn_ed383_cof(&Q);
-    ecn_ed383_mul2(buff,&G,h,&Q,&Q);
+    ecn_ed376_cof(&G); ecn_ed376_cof(&R); ecn_ed376_cof(&Q);
+    ecn_ed376_mul2(buff,&G,h,&Q,&Q);
 
-    if (ecn_ed383_cmp(&R,&Q))
+    if (ecn_ed376_cmp(&R,&Q))
         return 1;
     return 0;
 }

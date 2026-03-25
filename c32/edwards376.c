@@ -20,7 +20,7 @@
 
 
 // Automatically generated modular arithmetic C code
-// Command line : python monty.py 32 ED383
+// Command line : python monty.py 32 ED376
 // Python Script by Mike Scott (Technology Innovation Institute, UAE, 2025)
 
 #include <stdint.h>
@@ -37,7 +37,7 @@
 #define Nbytes 48
 
 #define MONTGOMERY
-#define ED383
+#define ED376
 
 // propagate carries
 static spint inline prop(spint *n) {
@@ -1037,7 +1037,7 @@ static int modcmp(const spint *a, const spint *b) {
 
 /*** End of automatically generated code ***/
 
-#include "Ed383curve.h"
+#include "Ed376curve.h"
 
 #define BYTES Nbytes
 #define LIMBS Nlimbs
@@ -1065,7 +1065,7 @@ static int teq(int b, int c)
 }
 
 // copy point
-void ecn_ed383_cpy(point *Q,point *P)
+void ecn_ed376_cpy(point *Q,point *P)
 {
     modcpy(Q->x,P->x);
     modcpy(Q->y,P->y);
@@ -1073,7 +1073,7 @@ void ecn_ed383_cpy(point *Q,point *P)
 }
 
 // randomize projective point
-void ecn_ed383_ran(int r,point *P)
+void ecn_ed376_ran(int r,point *P)
 {
     if (r>1)
     {
@@ -1084,14 +1084,14 @@ void ecn_ed383_ran(int r,point *P)
 }
 
 // negate P
-void ecn_ed383_neg(point *P)
+void ecn_ed376_neg(point *P)
 {
     modneg(P->x,P->x);
 }
 
 // add Q to P
 // standard projective method from EFD - https://www.hyperelliptic.org/EFD/
-void ecn_ed383_add(point *Q,point *P)
+void ecn_ed376_add(point *Q,point *P)
 {
     spint A[Nlimbs],B[Nlimbs],C[Nlimbs],D[Nlimbs],E[Nlimbs],F[Nlimbs],G[Nlimbs];
     modmul(Q->z,P->z,A);
@@ -1132,16 +1132,16 @@ void ecn_ed383_add(point *Q,point *P)
 }
 
 // subtract Q from P
-void ecn_ed383_sub(point *Q,point *P)
+void ecn_ed376_sub(point *Q,point *P)
 {
     point W;
-    ecn_ed383_cpy(Q,&W); ecn_ed383_neg(&W);
-    ecn_ed383_add(&W,P);
+    ecn_ed376_cpy(Q,&W); ecn_ed376_neg(&W);
+    ecn_ed376_add(&W,P);
 }
 
 // double P
 // standard projective method from EFD - https://www.hyperelliptic.org/EFD/
-void ecn_ed383_dbl(point *P)
+void ecn_ed376_dbl(point *P)
 {
     spint B[Nlimbs],C[Nlimbs],D[Nlimbs],E[Nlimbs],F[Nlimbs],H[Nlimbs],J[Nlimbs];
     modadd(P->x,P->y,B);
@@ -1188,7 +1188,7 @@ void ecn_ed383_dbl(point *P)
 */
 
 // set to infinity
-void ecn_ed383_inf(point *P)
+void ecn_ed376_inf(point *P)
 {
     modzer(P->x);
     modone(P->y);
@@ -1196,17 +1196,17 @@ void ecn_ed383_inf(point *P)
 }
 
 // test for infinity
-int ecn_ed383_isinf(point *P)
+int ecn_ed376_isinf(point *P)
 {
     return (modis0(P->x) && modcmp(P->y,P->z));
 }
 
 // set to affine
-void ecn_ed383_affine(point *P)
+void ecn_ed376_affine(point *P)
 {
     spint I[Nlimbs];
     if (modis0(P->z)) {
-        ecn_ed383_inf(P);
+        ecn_ed376_inf(P);
         return;
     }
     modinv(P->z,NULL,I);
@@ -1216,7 +1216,7 @@ void ecn_ed383_affine(point *P)
 }
 
 // move Q to P if d=1
-void ecn_ed383_cmv(int d,point *Q,point *P)
+void ecn_ed376_cmv(int d,point *Q,point *P)
 {
     modcmv(d,Q->x,P->x);
     modcmv(d,Q->y,P->y);
@@ -1224,7 +1224,7 @@ void ecn_ed383_cmv(int d,point *Q,point *P)
 }
 
 // return 1 if equal, else 0
-int ecn_ed383_cmp(point *P,point *Q)
+int ecn_ed376_cmp(point *P,point *Q)
 {
     spint a[Nlimbs],b[Nlimbs];
     modmul(P->x,Q->z,a);
@@ -1237,10 +1237,10 @@ int ecn_ed383_cmp(point *P,point *Q)
 }
 
 // extract (x,y) from point, if y is NULL compress and just return x and sign of y, if x is NULL compress and just return y and sign of x
-int ecn_ed383_get(point *P,char *x,char *y)
+int ecn_ed376_get(point *P,char *x,char *y)
 {
     spint X[Nlimbs],Y[Nlimbs];
-    ecn_ed383_affine(P);
+    ecn_ed376_affine(P);
     if (x!=NULL)
     {
         modcpy(P->x,X);
@@ -1294,7 +1294,7 @@ static void setxy(int s,const spint *x,const spint *y,point *P)
             modcpy(y,P->y);
             modone(P->z);
         } else {
-            ecn_ed383_inf(P);
+            ecn_ed376_inf(P);
         }
         return;
     }
@@ -1334,7 +1334,7 @@ static void setxy(int s,const spint *x,const spint *y,point *P)
     modpro(U,H);
     if (!modqr(H,U))
     { // point not on curve
-        ecn_ed383_inf(P);
+        ecn_ed376_inf(P);
         return;
     }
     modsqrt(U,H,V); // V=sqrt
@@ -1356,16 +1356,16 @@ static void setxy(int s,const spint *x,const spint *y,point *P)
 }
 
 // multiply point by small curve cofactor (here assumed to be 4 or 8)
-void ecn_ed383_cof(point *P)
+void ecn_ed376_cof(point *P)
 {
     int i;
     for (i=0;i<COF;i++)
-        ecn_ed383_dbl(P);
+        ecn_ed376_dbl(P);
 }
 
 // Is (x,y) of the right order? Must be checked by calling program!
 // api visible version, x and y are big endian byte arrays
-void ecn_ed383_set(int s,const char *x,const char *y,point *P)
+void ecn_ed376_set(int s,const char *x,const char *y,point *P)
 {
     spint X[Nlimbs],Y[Nlimbs];
     if (x!=NULL && y!=NULL)
@@ -1388,7 +1388,7 @@ void ecn_ed383_set(int s,const char *x,const char *y,point *P)
 }
 
 // set generator
-void ecn_ed383_gen(point *P)
+void ecn_ed376_gen(point *P)
 {
 #ifdef CONSTANT_X
     spint X[Nlimbs];
@@ -1406,19 +1406,19 @@ static void select(int b,point W[],point *P)
     int m = b >> TOPBIT;
     int babs = (b ^ m) - m;
 
-    ecn_ed383_cmv(teq(babs, 0),&W[0],P); // conditional move
-    ecn_ed383_cmv(teq(babs, 1),&W[1],P);
-    ecn_ed383_cmv(teq(babs, 2),&W[2],P);    
-    ecn_ed383_cmv(teq(babs, 3),&W[3],P);
-    ecn_ed383_cmv(teq(babs, 4),&W[4],P);
-    ecn_ed383_cmv(teq(babs, 5),&W[5],P);
-    ecn_ed383_cmv(teq(babs, 6),&W[6],P);    
-    ecn_ed383_cmv(teq(babs, 7),&W[7],P);
-    ecn_ed383_cmv(teq(babs, 8),&W[8],P);
+    ecn_ed376_cmv(teq(babs, 0),&W[0],P); // conditional move
+    ecn_ed376_cmv(teq(babs, 1),&W[1],P);
+    ecn_ed376_cmv(teq(babs, 2),&W[2],P);    
+    ecn_ed376_cmv(teq(babs, 3),&W[3],P);
+    ecn_ed376_cmv(teq(babs, 4),&W[4],P);
+    ecn_ed376_cmv(teq(babs, 5),&W[5],P);
+    ecn_ed376_cmv(teq(babs, 6),&W[6],P);    
+    ecn_ed376_cmv(teq(babs, 7),&W[7],P);
+    ecn_ed376_cmv(teq(babs, 8),&W[8],P);
 
-    ecn_ed383_cpy(P,&MP);
-    ecn_ed383_neg(&MP);  // minus P
-    ecn_ed383_cmv((int)(m & 1),&MP,P);
+    ecn_ed376_cpy(P,&MP);
+    ecn_ed376_neg(&MP);  // minus P
+    ecn_ed376_cmv((int)(m & 1),&MP,P);
 }
 
 // convert to double naf form
@@ -1453,22 +1453,22 @@ static void dnaf(const char *e,const char *f, signed char *w)
 
 // multiply point by scalar
 // constant time
-void ecn_ed383_mul(const char *e,point *P) 
+void ecn_ed376_mul(const char *e,point *P) 
 {
     int i,j;
     point Q,W[9];
     signed char w[2*Nbytes+1];
 
-    ecn_ed383_inf(&Q);
-    ecn_ed383_inf(&W[0]);                         // O
-    ecn_ed383_cpy(P,&W[1]);                       // P
-    ecn_ed383_cpy(P,&W[2]); ecn_ed383_dbl(&W[2]);        // 2P
-    ecn_ed383_cpy(&W[2],&W[3]); ecn_ed383_add(P,&W[3]);  // 3P
-    ecn_ed383_cpy(&W[2],&W[4]); ecn_ed383_dbl(&W[4]);    // 4P
-    ecn_ed383_cpy(&W[4],&W[5]); ecn_ed383_add(P,&W[5]);  // 5P
-    ecn_ed383_cpy(&W[3],&W[6]); ecn_ed383_dbl(&W[6]);    // 6P
-    ecn_ed383_cpy(&W[6],&W[7]); ecn_ed383_add(P,&W[7]);  // 7P
-    ecn_ed383_cpy(&W[4],&W[8]); ecn_ed383_dbl(&W[8]);    // 8P
+    ecn_ed376_inf(&Q);
+    ecn_ed376_inf(&W[0]);                         // O
+    ecn_ed376_cpy(P,&W[1]);                       // P
+    ecn_ed376_cpy(P,&W[2]); ecn_ed376_dbl(&W[2]);        // 2P
+    ecn_ed376_cpy(&W[2],&W[3]); ecn_ed376_add(P,&W[3]);  // 3P
+    ecn_ed376_cpy(&W[2],&W[4]); ecn_ed376_dbl(&W[4]);    // 4P
+    ecn_ed376_cpy(&W[4],&W[5]); ecn_ed376_add(P,&W[5]);  // 5P
+    ecn_ed376_cpy(&W[3],&W[6]); ecn_ed376_dbl(&W[6]);    // 6P
+    ecn_ed376_cpy(&W[6],&W[7]); ecn_ed376_add(P,&W[7]);  // 7P
+    ecn_ed376_cpy(&W[4],&W[8]); ecn_ed376_dbl(&W[8]);    // 8P
 
 // convert exponent to signed digit
     for (i=j=0;i<Nbytes;i++,j+=2)
@@ -1494,38 +1494,38 @@ void ecn_ed383_mul(const char *e,point *P)
     for (i = 2*Nbytes - 1; i >= 0; i--)
     {
         select(w[i],W,&Q);
-        ecn_ed383_dbl(P);
-        ecn_ed383_dbl(P);
-        ecn_ed383_dbl(P);
-        ecn_ed383_dbl(P);
-        ecn_ed383_add(&Q,P);
+        ecn_ed376_dbl(P);
+        ecn_ed376_dbl(P);
+        ecn_ed376_dbl(P);
+        ecn_ed376_dbl(P);
+        ecn_ed376_add(&Q,P);
     }
 }
 
 // double point multiplication R=eP+fQ
 // not constant time
-void ecn_ed383_mul2(const char *e,point *P,const char *f,point *Q,point *R)
+void ecn_ed376_mul2(const char *e,point *P,const char *f,point *Q,point *R)
 {
     int i,j;
     point W[5];
     signed char w[8*Nbytes+8];
-    ecn_ed383_inf(&W[0]);     // O
-    ecn_ed383_cpy(P,&W[1]);   // P
-    ecn_ed383_cpy(Q,&W[3]);   // Q
-    ecn_ed383_cpy(Q,&W[2]); ecn_ed383_sub(P,&W[2]);  // Q-P
-    ecn_ed383_cpy(Q,&W[4]); ecn_ed383_add(P,&W[4]);  // Q+P
+    ecn_ed376_inf(&W[0]);     // O
+    ecn_ed376_cpy(P,&W[1]);   // P
+    ecn_ed376_cpy(Q,&W[3]);   // Q
+    ecn_ed376_cpy(Q,&W[2]); ecn_ed376_sub(P,&W[2]);  // Q-P
+    ecn_ed376_cpy(Q,&W[4]); ecn_ed376_add(P,&W[4]);  // Q+P
 
     dnaf(e,f,w);
 
     i=8*Nbytes+7;
     while (w[i]==0) i--; // ignore leading zeros
-    ecn_ed383_inf(R);
+    ecn_ed376_inf(R);
     while (i>=1)
     {
-        ecn_ed383_dbl(R);
+        ecn_ed376_dbl(R);
         j=w[i];
-        if (j>0) ecn_ed383_add(&W[j],R);
-        if (j<0) ecn_ed383_sub(&W[-j],R);
+        if (j>0) ecn_ed376_add(&W[j],R);
+        if (j<0) ecn_ed376_sub(&W[-j],R);
         i--;
     }
 }

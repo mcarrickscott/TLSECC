@@ -11,5 +11,5 @@ pub mod weiers521;
 pub mod nist521;
 pub mod x25519;
 pub mod x448;
-pub mod edwards383;
-pub mod ed383;
+pub mod edwards376;
+pub mod ed376;

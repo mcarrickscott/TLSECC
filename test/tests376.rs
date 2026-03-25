@@ -2,10 +2,10 @@ extern crate tlsecc;
 
 use std::str;
 
-use tlsecc::ed383::BYTES;
-use tlsecc::ed383::KEY_PAIR;
-use tlsecc::ed383::SIGN;
-use tlsecc::ed383::VERIFY;
+use tlsecc::ed376::BYTES;
+use tlsecc::ed376::KEY_PAIR;
+use tlsecc::ed376::SIGN;
+use tlsecc::ed376::VERIFY;
 
 
 // Some utility functions for I/O and debugging

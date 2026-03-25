@@ -6,9 +6,9 @@
 // See for example https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-5.pdf
 
 
-use crate::edwards383;
-use crate::edwards383::*;
-use crate::edwards383::ECP;
+use crate::edwards376;
+use crate::edwards376::*;
+use crate::edwards376::ECP;
 
 use crate::hash;
 use crate::hash::*;

@@ -1,6 +1,6 @@
 
-// Test program for ed383 signature
-// gcc -O2 tests383.c ed383.c edwards383.c hash.c -o tests383
+// Test program for ed376 signature
+// gcc -O2 tests376.c ed376.c edwards376.c hash.c -o tests376
 
 #include <stdio.h>
 #include "tlsecc.h"
@@ -70,16 +70,16 @@ int main()
     int res;
     printf("private key= "); puts(sk); 
     fromHex(BYTES,sk,prv);
-    ED383_KEY_PAIR(prv,pub);
+    ED376_KEY_PAIR(prv,pub);
     toHex(BYTES,pub,buff);
     printf("public key=  "); puts(buff);
 
     m[0]=0x03; // message to be signed
-    ED383_SIGN(prv,pub,1,m,sig);
+    ED376_SIGN(prv,pub,1,m,sig);
     toHex(2*BYTES,sig,buff);
     printf("signature=  "); puts(buff); 
 
-    res=ED383_VERIFY(pub,1,m,sig);
+    res=ED376_VERIFY(pub,1,m,sig);
     if (res)
         printf("Signature is valid\n");
     else
