@@ -1079,7 +1079,7 @@ pub fn VERIFY(public: &[u8],m:&[u8],sig:&[u8]) -> bool {
     }
     buff[BYTES-1]&=0x7f;
     buff.reverse();
-    sign|=((public[BYTES-1]>>7)&1) as usize;
+    sign=((public[BYTES-1]>>7)&1) as usize;
     ecnset(sign,None,Some(&buff),&mut Q);
     if ecnisinf(&Q) {
         return false;

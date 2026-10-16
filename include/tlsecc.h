@@ -282,5 +282,33 @@ extern void ED376_SIGN(char *SK,char *PK,int mlen,char *m,char *sig);
  */
 extern int ED376_VERIFY(char *PK,int mlen,char *m,char *sig);
 
+/**** Ed500 *****/
 
+/** @brief Generate an Ed500 key pair
+ *
+    @param compress set true for point compression
+    @param SK an input random 64-byte secret key
+    @param PK an output 64 byte public key
+ */
+extern void ED500_KEY_PAIR(char *SK,char *PK);
+
+/** @brief Generate an Ed500 EdDSA signature
+ *
+    @param SK an input 64-byte secret key
+    @param PK an input 64 byte public key
+    @param mlen the length of the input
+    @param m an input message
+    @param sig an output 128 byte signature
+ */
+extern void ED500_SIGN(char *SK,char *PK,int mlen,char *m,char *sig);
+
+/** @brief Verify an Ed500 signature
+ *
+    @param PK an input random public key, 64 bytes
+    @param mlen the length of the input
+    @param m an input message
+    @param sig an input 128 byte signature
+    @return true if signature is good, else false
+ */
+extern int ED500_VERIFY(char *PK,int mlen,char *m,char *sig);
 #endif
